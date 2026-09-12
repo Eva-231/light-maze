@@ -1,0 +1,11 @@
+import {mkdir,cp,rm} from 'node:fs/promises';
+await rm('dist',{recursive:true,force:true});
+await mkdir('dist/server',{recursive:true});
+await mkdir('dist/.openai',{recursive:true});
+await cp('public','dist/client',{recursive:true});
+await cp('src/worker.js','dist/server/index.js');
+await cp('standalone','dist/standalone',{recursive:true});
+await cp('package.json','dist/package.json');
+await cp('MIGRATION_REPORT.md','dist/MIGRATION_REPORT.md');
+await cp('.openai/hosting.json','dist/.openai/hosting.json');
+console.log('Built LIGHT MAZE: 3D client, anonymous cloud saves, and rankings.');
