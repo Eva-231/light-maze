@@ -17,7 +17,7 @@ export function createCamp({getProgress,changed,sound,openDialog,rankings,canCha
  createCraftingUI({getProgress,changed:()=>{discoverLoadout(getProgress());changed();render();},openDialog,canChange:()=>!busy&&canChange()});
  function summary(){const p=getProgress();$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備';}
  function render(){summary();if(tab!=='forge'){appraisalPreview?.close();appraisalPreview=null;}const unlocked=getProgress().floor>=4;document.querySelectorAll('[data-camp-tab]').forEach(b=>{if(b.dataset.campTab==='forge')b.hidden=!unlocked;});for(const b of document.querySelectorAll('[data-camp-tab]'))b.setAttribute('aria-selected',String(b.dataset.campTab===tab));
-  const p=getProgress();avatar.set(p,tab==='loadout');$('camp-forge').hidden=tab!=='forge';$('camp-loadout').hidden=tab!=='loadout';$('camp-records').hidden=tab!=='records';$('camp-ranking').hidden=tab!=='ranking';
+  const p=getProgress();$('crafting-open').hidden=!p.chapterStars?.['18'];avatar.set(p,tab==='loadout');$('camp-forge').hidden=tab!=='forge';$('camp-loadout').hidden=tab!=='loadout';$('camp-records').hidden=tab!=='records';$('camp-ranking').hidden=tab!=='ranking';
   if(tab==='forge'){
    $('appraise-all').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;
    $('appraise-cache').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;$('appraise-cache').textContent='持ち帰った遺物を鑑定 · '+p.caches.length+'個';
