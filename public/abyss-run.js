@@ -3,7 +3,7 @@ const copy=x=>JSON.parse(JSON.stringify(x));
 const params=typeof location!=='undefined'?new URLSearchParams(location.search):new URLSearchParams();
 export const ABYSS_TEST_MODE=params.get('test')==='abyss';
 export const ABYSS_TEST_FLOOR=Math.max(1,Math.min(99,Number(params.get('floor'))||80));
-export const ABYSS_TEST_GEAR=['legend','abyss3','abyss5','mythic'].includes(params.get('gear'))?params.get('gear'):'abyss3';
+export const ABYSS_TEST_GEAR=['legend','abyss3','abyss4','abyss5','mythic'].includes(params.get('gear'))?params.get('gear'):'abyss3';
 export const ABYSS_TEST_WARP=params.get('warp')==='1';
 export const freshAbyss=()=>({unlocked:false,bestFloor:0,cleared99:false,revivalStock:0,checkpoint:null,activeId:null,completedRuns:[],mutators:[]});
 export function canEnterAbyss(p){return ABYSS_TEST_MODE||!!p.chapterStars?.['18'];}
