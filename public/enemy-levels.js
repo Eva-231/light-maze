@@ -10,12 +10,15 @@ export function levelEnemy(e,config,random=Math.random){
 }
 export function spawnDue(clock,dt,rules,enemies){if(rules.bonus){clock.seconds=0;return 0;}const interval=rules.spawnDelay||rules.spawnInterval;clock.seconds=(clock.seconds||0)+dt;if(clock.seconds<interval)return 0;clock.seconds%=interval;return Math.max(0,Math.min(rules.spawnCount,ENEMY_CAP-aliveCount(enemies)));}
 export function bossZones(e,player){
- const r=(e.enraged?1.85:1.55)*(e.scale?.range||1),aim={x:player.x,z:player.z,radius:r};
+ // Guardian rifts are a reaction check, not unavoidable damage: keep at most two
+ // simultaneous danger circles and shrink them enough to leave a real escape lane.
+ const r=(e.enraged?1.30:1.10)*(e.scale?.range||1),aim={x:player.x,z:player.z,radius:r};
  if(e.bossPattern===null||e.bossPattern===undefined)return[aim];
  const pattern=e.bossPattern%5;
- if(pattern===0)return[aim,{x:e.x,z:e.z,radius:2.5}];
- if(pattern===1)return[-1,0,1].map(i=>({x:aim.x+i*2.4,z:aim.z,radius:r*.8}));
- if(pattern===2)return[aim,{x:aim.x,z:aim.z+2.6,radius:r*.9},{x:aim.x,z:aim.z-2.6,radius:r*.9}];
- if(pattern===3)return[aim,{x:e.x+2.8,z:e.z,radius:r},{x:e.x-2.8,z:e.z,radius:r}];
- return[aim,...[0,1,2,3].map(i=>({x:aim.x+Math.cos(i*Math.PI/2+(e.bossPattern===9&&e.enraged?Math.PI/4:0))*3.2,z:aim.z+Math.sin(i*Math.PI/2+(e.bossPattern===9&&e.enraged?Math.PI/4:0))*3.2,radius:r*.8}))];
+ if(pattern===0)return[aim,{x:e.x,z:e.z,radius:1.75}];
+ if(pattern===1)return[{x:aim.x-2.7,z:aim.z,radius:r*.78},{x:aim.x+2.7,z:aim.z,radius:r*.78}];
+ if(pattern===2)return[aim,{x:aim.x,z:aim.z+3.0,radius:r*.82}];
+ if(pattern===3)return[aim,{x:e.x+(player.x>=e.x?-3.1:3.1),z:e.z,radius:r*.82}];
+ const angle=Math.atan2(player.z-aim.z,player.x-aim.x)+Math.PI/2;
+ return[aim,{x:aim.x+Math.cos(angle)*3.4,z:aim.z+Math.sin(angle)*3.4,radius:r*.76}];
 }
