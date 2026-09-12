@@ -35,18 +35,18 @@ export function rollRelic(seed,quality=0,pity=0,options={}){
  const r=random(seed),odds=rarityOdds(quality,pity);let roll=r(),tier=3;for(let i=0;i<4;i++){roll-=odds[i];if(roll<0){tier=i;break;}}
  tier=Math.max(tier,options.minTier||0);const allowed=RELICS.map((_,i)=>i).filter(i=>!RELICS[i].exclusive&&TYPE_UNLOCKS[i]<=(options.unlocked||8)),type=options.forcedType??allowed[Math.floor(r()*allowed.length)],a=Math.floor(r()*AFFIXES.length),b=(a+1+Math.floor(r()*(AFFIXES.length-1)))%AFFIXES.length;
  if(RELICS[type].exclusive)tier=3;const minRoll=Math.max(1,Math.min(100,options.minRoll||1));
- return{id:(seed>>>0).toString(36)+'-'+Math.floor(r()*1e8).toString(36),type,tier,a,b,rollA:minRoll+Math.floor(r()*(101-minRoll)),rollB:minRoll+Math.floor(r()*(101-minRoll)),favorite:false};
+ return{id:(seed>>>0).toString(36)+'-'+Math.floor(r()*1e8).toString(36),type,tier,a,b,rollA:minRoll+Math.floor(r()*(101-minRoll)),rollB:minRoll+Math.floor(r()*(101-minRoll)),depth:Math.max(0,Math.min(20,Math.floor(options.depth||0))),favorite:false};
 }
-export function affixValue(item,second=false){return Math.max(1,Math.round(AFFIXES[second?item.b:item.a].max*[.55,.90,1.45,2.6][item.tier]*(.45+(second?item.rollB:item.rollA)/100*.55)));}
+export function affixValue(item,second=false){const depth=Math.max(0,Math.min(20,item.depth||0)),scale=1+depth*.025;return Math.max(1,Math.round(AFFIXES[second?item.b:item.a].max*[.55,.90,1.45,2.6][item.tier]*(.45+(second?item.rollB:item.rollA)/100*.55)*scale));}
 export function relicQuality(item){return Math.round((item.rollA+item.rollB)/2);}
-export function relicPower(item){return [25,65,150,360][item.tier]+Math.round(relicQuality(item)*[.18,.30,.55,1.1][item.tier])+(RELICS[item.type].exclusive?120:0);}
+export function relicPower(item){const depth=Math.max(0,Math.min(20,item.depth||0));return [25,65,150,360][item.tier]+Math.round(relicQuality(item)*[.18,.30,.55,1.1][item.tier])+(RELICS[item.type].exclusive?120:0)+depth*14;}
 export function salvageValue(item){return RELICS[item.type].exclusive?4000:[80,180,500,2400][item.tier];}
 export function toggleFavorite(item){if(!item)return false;item.favorite=!item.favorite;return item.favorite;}
 export function sellRelic(progress,id){const item=progress.inventory.find(i=>i.id===id);if(!item)return{error:'装備が見つかりません。'};if(item.favorite)return{error:'お気に入りの装備は売却できません。★を外してください。'};if(progress.equipped.includes(item.id))return{error:'装備中の品は売却できません。'};progress.inventory=progress.inventory.filter(i=>i!==item);const value=salvageValue(item);progress.totalBank+=value;return{item,value};}
 export function loadoutStats(progress,daily=false){
- const stats={maxHp:100,maxMp:60,power:0,armor:0,crit:.05,economy:0,lightBonus:0,mineSpeed:1,treasureBonus:1,mpRegen:.30,killMp:6,healBonus:1,boltBonus:1,freezeBonus:0,echo:false,moveSpeed:1,warpImmune:false,slamResist:0,weakBonus:1,boltCooldown:1,lightRecovery:1,spellMultiplier:1,damageReduction:0,trapResist:0,echoCount:1,echoDamage:.35,weakMana:0,lastStand:false,dodgeLight:0,staffType:0,staffTier:0,enemyMultipliers:[1,1,1,1,1,1]};
+ const stats={maxHp:100,maxMp:60,power:0,armor:0,crit:.05,economy:0,lightBonus:0,mineSpeed:1,treasureBonus:1,mpRegen:.30,killMp:6,healBonus:1,boltBonus:1,freezeBonus:0,echo:false,moveSpeed:1,warpImmune:false,slamResist:0,weakBonus:1,boltCooldown:1,lightRecovery:1,spellMultiplier:1,damageReduction:0,trapResist:0,echoCount:1,echoDamage:.35,weakMana:0,lastStand:false,dodgeLight:0,staffType:0,staffTier:0,gearDepth:0,enemyMultipliers:[1,1,1,1,1,1]};
  if(daily)return stats;
- for(const id of progress.equipped||[]){const item=progress.inventory?.find(i=>i.id===id);if(!item)continue;if(RELICS[item.type].slot===0){stats.staffType=item.type;stats.staffTier=item.tier;stats.spellMultiplier=[1,1.10,1.25,1.60][item.tier];}else if(RELICS[item.type].slot===1){stats.maxHp+=[0,4,10,28][item.tier];stats.damageReduction=[0,.04,.10,.20][item.tier];}else stats.lightBonus+=[0,2,6,16][item.tier];const grade=item.tier;
+ for(const id of progress.equipped||[]){const item=progress.inventory?.find(i=>i.id===id);if(!item)continue;const depth=Math.max(0,Math.min(20,item.depth||0));stats.gearDepth=Math.max(stats.gearDepth,depth);if(RELICS[item.type].slot===0){stats.staffType=item.type;stats.staffTier=item.tier;stats.spellMultiplier=[1,1.10,1.25,1.60][item.tier];}else if(RELICS[item.type].slot===1){stats.maxHp+=[0,4,10,28][item.tier];stats.damageReduction=[0,.04,.10,.20][item.tier];}else stats.lightBonus+=[0,2,6,16][item.tier];const grade=item.tier;
   for(const [a,n] of [[item.a,affixValue(item)],[item.b,affixValue(item,true)]]){const key=AFFIXES[a].key;if(key==='hp')stats.maxHp+=n;else if(key==='mp')stats.maxMp+=n;else if(key==='crit'||key==='economy')stats[key]+=n/100;else stats[key]+=n;}
   switch(RELICS[item.type].key){
    case'dawn':stats.boltBonus=[1.1,1.2,1.4,1.9][grade];stats.enemyMultipliers[0]=[1.12,1.18,1.28,1.45][grade];break;case'frost':stats.freezeBonus=[1,1.3,2,3.2][grade];stats.enemyMultipliers[1]=stats.enemyMultipliers[4]=[1.15,1.25,1.4,1.65][grade];break;
@@ -58,7 +58,7 @@ export function loadoutStats(progress,daily=false){
    case'nightking':stats.weakBonus=1.8;stats.weakMana=3;break;case'phoenix':stats.lastStand=true;stats.maxHp+=24;break;case'eclipse':stats.dodgeLight=4;break;
   }
  }
- stats.maxHp=Math.min(240,stats.maxHp);stats.maxMp=Math.min(160,stats.maxMp);stats.power=Math.min(70,stats.power);stats.armor=Math.min(22,stats.armor);stats.crit=Math.min(.45,stats.crit);stats.economy=Math.min(.32,stats.economy);return stats;
+ const depth=stats.gearDepth||0;stats.maxHp=Math.min(240+depth*4,stats.maxHp);stats.maxMp=Math.min(160+depth*2,stats.maxMp);stats.power=Math.min(70+depth*2,stats.power);stats.armor=Math.min(22+depth,stats.armor);stats.crit=Math.min(.45+Math.min(.08,depth*.004),stats.crit);stats.economy=Math.min(.32+Math.min(.06,depth*.003),stats.economy);return stats;
 }
 export function rewardPrecisionEvade(player,stats,action,capacity){
  if(!action.precision||!stats.dodgeLight||player.elapsed<(player.dodgeRewardAt||0))return null;
@@ -72,7 +72,7 @@ export function relicDescription(item){
  const t=item.tier,r=RELICS[item.type],effects={
  dawn:'光弾の威力 +'+[10,20,40,90][t]+'% · 影兵特効',frost:'氷槍の凍結 +'+[1,1.3,2,3.2][t]+'秒 · 狼/銀光特効',echo:'光弾が近くの敵'+[1,1,2,3][t]+'体に'+[35,50,70,100][t]+'%伝播',soul:'撃破ドロップのMP回復 +'+[2,3,5,9][t],vigor:'最大HP +'+[8,14,24,45][t],mend:'治癒の回復量 +'+[20,35,65,120][t]+'%',moon:'最大MP +'+[8,12,20,36][t],hawk:'会心率 +'+[5,8,12,18][t]+'%',home:'光の容量 +'+[4,8,14,25][t],miner:'採掘速度 +'+[20,35,70,120][t]+'%',gold:'宝の価値 +'+[8,15,25,45][t]+'%',spring:'MP自然回復 +'+[25,50,100,200][t]+'%',swift:'移動速度 ×'+[1.1,1.14,1.20,1.28][t],anchor:'敵の転位術を無効化'+(t?' · 罠ダメージ −'+[0,10,25,45][t]+'%':''),granite:'叩きつけダメージ −'+[35,42,52,65][t]+'%',royal:'弱点への魔法ダメージ +'+[20,35,60,120][t]+'% · 巨兵/術師/番人特効',silver:'光弾の再使用時間 −'+[15,20,30,48][t]+'%',dawnlight:'光の回復アイテムの効果 +'+[25,40,65,110][t]+'%'};
  const intrinsic=t?(r.slot===0?'全攻撃魔法 ×'+[1,1.1,1.25,1.6][t]:r.slot===1?'HP +'+[0,4,10,28][t]+' · 全ダメージ −'+[0,4,10,20][t]+'%':'光容量 +'+[0,2,6,16][t]):'';
- return (effects[r.key]||r.effect)+(intrinsic?' ／ '+intrinsic:'');
+ const depth=Math.max(0,Math.min(20,item.depth||0)),depthText=depth?' ／ 深度補正 +'+Math.round(depth*2.5)+'%':'';return (effects[r.key]||r.effect)+(intrinsic?' ／ '+intrinsic:'')+depthText;
 }
 export function appraisal(progress,seed,{cache=false}={}){
  if(progress.floor<4)return{error:'遺物の鑑定は3面クリアで解放されます。'};
