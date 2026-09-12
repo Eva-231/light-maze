@@ -1,3 +1,4 @@
+import {gearOrnaments} from './abyss-visuals.js';
 import * as T from './vendor/three.module.js';
 import {RELICS,RARITIES} from './relics.js';
 
@@ -17,7 +18,7 @@ export function buildEquipmentAvatar(progress){
  const group=new T.Group(),animated=[],glows=[],capeColor=phoenix?0x39191b:armor?.type===13?0x201a35:armor?.type===12?0x152f36:0x15212b;
  const steel=new T.MeshStandardMaterial({color:heavy?0x687581:phoenix?0x303640:0x516373,metalness:.58,roughness:.34});
  const darkSteel=new T.MeshStandardMaterial({color:0x1b2732,metalness:.52,roughness:.42});
- const trim=new T.MeshStandardMaterial({color:armorTier===3?0xcba770:armorTier===2?0x9b91b6:0x87989e,metalness:.66,roughness:.28});
+ const trim=new T.MeshStandardMaterial({color:armorTier>=3?0xcba770:armorTier===2?0x9b91b6:0x87989e,metalness:.66,roughness:.28});
  const gold=new T.MeshStandardMaterial({color:staffTier>=2?0xd3b279:0x839aa8,metalness:.68,roughness:.27});
  const cloth=new T.MeshStandardMaterial({color:capeColor,roughness:.91,side:T.DoubleSide});
  const leather=new T.MeshStandardMaterial({color:0x11191e,metalness:.05,roughness:.83});
@@ -82,11 +83,12 @@ export function buildEquipmentAvatar(progress){
  if(staffTier===3)for(const side of [-1,1]){const shard=mesh(gem,weaponLight,side*.115,1.39,0,.014,.06,.014,weapon);animated.push(shard);}
  mesh(gem,lampLight,.228,1.40,.112,.028,.062,.026);mesh(new T.TorusGeometry(.045,.007,5,20),gold,.228,1.40,.117);
  if(armor?.type===13)for(let k=0;k<3;k++)etch([-.12,1.65+k*.07,.153],[.12,1.65+k*.07,.153],armorLight,.004);
- if(tier===3){const halo=mesh(new T.TorusGeometry(.40,.006,5,64,Math.PI*1.40),emission(3,.6),0,2.37,-.19);halo.rotation.z=.3;animated.push(halo);}
+ if(tier>=3){const halo=mesh(new T.TorusGeometry(.40,.006,5,64,Math.PI*1.40),emission(3,.6),0,2.37,-.19);halo.rotation.z=.3;animated.push(halo);}
  // Subtle emissive aura rather than a flat luminous silhouette.
- const auraMat=new T.ShaderMaterial({uniforms:{color:{value:new T.Color(RARITIES[tier].color)},strength:{value:tier===3?.16:tier===2?.09:.025}},vertexShader:'varying vec2 uvp;void main(){uvp=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'uniform vec3 color;uniform float strength;varying vec2 uvp;void main(){float d=length((uvp-.5)*vec2(1.2,.8))*2.;gl_FragColor=vec4(color,pow(max(0.,1.-d),3.)*strength);}',transparent:true,depthWrite:false,blending:T.AdditiveBlending});
+ const auraMat=new T.ShaderMaterial({uniforms:{color:{value:new T.Color(RARITIES[tier].color)},strength:{value:tier>=5?.30:tier===4?.22:tier===3?.16:tier===2?.09:.025}},vertexShader:'varying vec2 uvp;void main(){uvp=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'uniform vec3 color;uniform float strength;varying vec2 uvp;void main(){float d=length((uvp-.5)*vec2(1.2,.8))*2.;gl_FragColor=vec4(color,pow(max(0.,1.-d),3.)*strength);}',transparent:true,depthWrite:false,blending:T.AdditiveBlending});
  mesh(new T.PlaneGeometry(2.5,3.1),auraMat,0,1.49,-.55);
  const base=mesh(new T.CylinderGeometry(.73,.80,.045,48),darkSteel,0,.019,.025);mesh(new T.TorusGeometry(.727,.006,5,64),trim,0,.043,.025).rotation.x=Math.PI/2;
+ if(tier>=4){const ornaments=gearOrnaments(staffTier===tier?staff:armorTier===tier?armor:lamp,tier);group.add(ornaments);animated.push(ornaments);}
  batchRigid(group,[...animated,staffCore]);group.userData={staffType:style,staffTier,armorType:armor?.type??-1,armorTier,tier,humanHeight:2.635,headHeight:.36};return{group,animated,glows,staffCore};
 }
 
@@ -101,7 +103,7 @@ export class AvatarPreview{
     this.scene=new T.Scene();this.camera=new T.PerspectiveCamera(34,1,.1,20);this.camera.position.set(.13,1.56,6.25);this.camera.lookAt(0,1.48,0);this.scene.add(new T.HemisphereLight(0xd6e5ff,0x263039,2.1));
     const key=new T.DirectionalLight(0xf8e4c4,4);key.position.set(-2,4,3);this.scene.add(key);const rim=new T.DirectionalLight(0x839fce,3.5);rim.position.set(2,2,-2);this.scene.add(rim);const fill=new T.DirectionalLight(0xa8cde4,1.3);fill.position.set(2,1,2);this.scene.add(fill);
    }
-   const signature=progress.equipped.join('|');if(signature!==this.signature||!this.rig){if(this.rig)disposeAvatar(this.rig.group);this.rig=buildEquipmentAvatar(progress);this.scene.add(this.rig.group);this.signature=signature;}
+   const signature=progress.equipped.map(id=>{const i=progress.inventory.find(a=>a.id===id);return id+':'+(i?.evolved||false)+':'+(i?.upgrade||0);}).join('|');if(signature!==this.signature||!this.rig){if(this.rig)disposeAvatar(this.rig.group);this.rig=buildEquipmentAvatar(progress);this.scene.add(this.rig.group);this.signature=signature;}
    const width=Math.max(180,this.canvas.clientWidth||330),height=360;this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();cancelAnimationFrame(this.frame);this.frame=requestAnimationFrame(t=>this.draw(t));
   }catch{this.canvas.hidden=true;}
  }

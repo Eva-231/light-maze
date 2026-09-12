@@ -1,1 +1,17 @@
-{"name":"light-maze","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"node standalone/server.mjs","start":"node standalone/server.mjs","build":"node build.mjs","test":"node tests.mjs && node rpg-tests.mjs && node journey-tests.mjs && node integration-tests.mjs && node stability-tests.mjs && node endgame-tests.mjs && node ranking-tests.mjs","verify":"npm test && npm run build && node standalone/verify.mjs"},"engines":{"node":">=20"}}
+{
+  "name": "light-maze",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node standalone/server.mjs",
+    "start": "node standalone/server.mjs",
+    "build": "node build.mjs",
+    "test": "node tests.mjs && node rpg-tests.mjs && node journey-tests.mjs && node integration-tests.mjs && node stability-tests.mjs && node endgame-tests.mjs && node ranking-tests.mjs && node abyss-tests.mjs",
+    "verify": "npm test && npm run build && node standalone/verify.mjs && node standalone/verify.mjs --built",
+    "test:browser": "node browser-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
