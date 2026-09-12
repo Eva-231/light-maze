@@ -216,7 +216,7 @@ function drawMap(canvas,full){
  const px=ox+(state.x/S+.5)*scale,pz=oz+(state.z/S+.5)*scale;c.save();c.translate(px,pz);c.rotate(-state.yaw);c.fillStyle='#cfffe6';c.shadowColor='#a8ffcd';c.shadowBlur=6;c.beginPath();c.moveTo(0,-7);c.lineTo(5,5);c.lineTo(0,2);c.lineTo(-5,5);c.closePath();c.fill();c.restore();
  if(!full&&(hx<0||hx>width||hz<0||hz>height)){c.font='15px sans-serif';c.textAlign='center';c.fillStyle='#edca80';c.fillText('⌂',clamp(hx,12,width-12),clamp(hz,18,height-14));}
 }
-function resetInput(){mineHeld=false;const ids=[input.stick?.id,input.look?.id,minePointer];minePointer=null;pointerContacts.reset();input.reset();for(const id of ids)if(id!==undefined)try{for(const node of [$('game'),$('mine-action')])if(node.hasPointerCapture(id))node.releasePointerCapture(id);}catch{}syncInputGuides();}
+function resetInput(){mineHeld=false;const ids=[...pointerContacts.contacts.keys(),input.stick?.id,input.look?.id,minePointer];minePointer=null;pointerContacts.reset();input.reset();for(const id of ids)if(id!==undefined)try{for(const node of [$('game'),$('mine-action')])if(node.hasPointerCapture(id))node.releasePointerCapture(id);}catch{}syncInputGuides();}
 function syncInputGuides(){$('joystick').style.display=input.stick?'block':'none';$('look-mark').style.display=input.look?'block':'none';$('move-guide').classList.toggle('active',!!input.stick);$('look-guide').classList.toggle('active',!!input.look);}
 function hasDialog(){return !!document.querySelector('dialog[open]');}
 function openDialog(id){if(state.mode==='play'){state.paused=true;resetInput();}if(id==='map-dialog'){$('fullmap-percent').textContent='MAP REVEALED '+reveal.percent.toFixed(1)+'%';drawMap($('fullmap'),true);}$(id).showModal();}
@@ -257,7 +257,7 @@ game.addEventListener('pointermove',e=>{
  if(state.mode!=='play'||state.paused)return;const delta=input.move(e.pointerId,e.clientX,e.clientY,e.buttons,e.pointerType);if(delta?.kind==='move')$('stick-knob').style.transform=`translate(${delta.x}px,${delta.y}px)`;
  else if(delta?.kind==='look'){const sensitivity=.0042*settings.sensitivity;state.yaw-=delta.x*sensitivity;state.pitch=clamp(state.pitch-delta.y*sensitivity,-.82,.82);lastLook=performance.now();}syncInputGuides();
 });
-function release(e){pointerContacts.release(e.pointerId);input.release(e.pointerId);if(minePointer===e.pointerId){minePointer=null;mineHeld=false;}syncInputGuides();}
+function release(e){pointerContacts.release(e.pointerId);input.release(e.pointerId);for(const node of [$('game'),$('mine-action')])try{if(node.hasPointerCapture(e.pointerId))node.releasePointerCapture(e.pointerId);}catch{}if(minePointer===e.pointerId){minePointer=null;mineHeld=false;}syncInputGuides();}
 window.addEventListener('touchstart',e=>pointerContacts.bind(e.touches),{capture:true,passive:true});
 for(const type of ['touchend','touchcancel'])window.addEventListener(type,e=>{for(const pointerId of pointerContacts.reconcile(e.touches))release({pointerId});},{capture:true,passive:true});
 for(const target of [game,window])for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,release,true);
@@ -321,7 +321,7 @@ function simulate(dt){
 }
 let lastFrame=performance.now(),slowTime=0;
 function frame(now){requestAnimationFrame(frame);const raw=(now-lastFrame)/1000,dt=Math.min(Math.max(raw,0),.05);lastFrame=now;if(document.hidden||!world)return;
- if(input.guard(raw,id=>game.hasPointerCapture(id))){mineHeld=false;syncInputGuides();if(raw>.8&&state.mode==='play'&&!state.paused){$('pause-reason').textContent='動作が止まったため一時停止しました。指を離してから再開してください。';openDialog('pause-dialog');}}else syncInputGuides();
+ if(input.guard(raw,id=>game.hasPointerCapture(id))){resetInput();if(raw>.8&&state.mode==='play'&&!state.paused){$('pause-reason').textContent='動作が止まったため一時停止しました。指を離してから再開してください。';openDialog('pause-dialog');}}else syncInputGuides();
  try{
  if(state.mode==='play'&&!state.paused)simulate(dt);
  if(state.mode==='menu'){state.yaw=Math.sin(now*.00013)*.07;state.pitch=.18+Math.sin(now*.00017)*.018;}
