@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {MovementInput} from './public/input.js';
+import {PointerContacts} from './public/pointer-contacts.js';
 import {Save,newProgress,balance} from './public/save.js';
 import {appraisal,appraisalBatch,rollRelic,INVENTORY_LIMIT} from './public/relics.js';
 import {buildEquipmentAvatar,disposeAvatar} from './public/avatar.js';
 import {Sound} from './public/audio.js';
 import worker from './src/worker.js';
 let passed=0;const test=async(name,fn)=>{await fn();passed++;console.log('PASS',name);};
+await test('Touch fallback releases only the ended identifier, including nonmatching pointer IDs and cancel',()=>{
+ const contacts=new PointerContacts(),p=(id,x)=>({pointerId:id,pointerType:'touch',clientX:x,clientY:600}),t=(id,x)=>({identifier:id,clientX:x,clientY:600});
+ contacts.begin(p(41,50));contacts.bind([t(0,50)]);contacts.begin(p(72,300));contacts.bind([t(0,50),t(1,300)]);
+ assert.deepEqual(contacts.reconcile([t(1,320)]),[41]);assert(contacts.contacts.has(72));assert.deepEqual(contacts.reconcile([]),[72]);
+ contacts.bind([t(8,80)]);contacts.begin(p(99,80));assert.deepEqual(contacts.reconcile([]),[99]);contacts.begin(p(7,30));contacts.reset();assert.equal(contacts.contacts.size,0);
+});
 await test('Two-thumb input keeps movement and look independent across iOS buttons=0 events, releases, and stalled frames',()=>{
  const input=new MovementInput();assert.equal(input.begin(1,60,650,390),'move');assert.equal(input.begin(2,320,650,390),'look');assert.equal(input.begin(3,100,640,390),null);input.move(1,60,608);assert.equal(input.y,1);input.move(2,330,655);assert.equal(input.y,1);
  for(let i=0;i<10000;i++)input.guard(.016,()=>true);assert.equal(input.y,1,'A stationary held thumb must not time out');input.release(2);assert.equal(input.y,1);input.release(1);assert.equal(input.y,0);
