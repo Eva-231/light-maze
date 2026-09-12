@@ -8,7 +8,7 @@ export function levelEnemy(e,config,random=Math.random){
  e.bossPattern=e.kind===5&&config.abyss?Math.min(9,Math.floor(config.abyssFloor/10)-1+(config.abyssFloor===98?1:0)):null;e.title=e.bossPattern!==null?bossTitle(config.abyssFloor):'';
  e.label='Lv.'+level+' '+e.mutations.map(k=>MUTATIONS.find(m=>m.id===k)?.name).join(' ')+' '+(e.elite?'◆':'');return e;
 }
-export function spawnDue(clock,dt,rules,enemies){if(rules.bonus){clock.seconds=0;return 0;}clock.seconds=(clock.seconds||0)+dt;if(clock.seconds<rules.spawnInterval)return 0;clock.seconds%=rules.spawnInterval;return Math.max(0,Math.min(rules.spawnCount,ENEMY_CAP-aliveCount(enemies)));}
+export function spawnDue(clock,dt,rules,enemies){if(rules.bonus){clock.seconds=0;return 0;}const interval=rules.spawnDelay||rules.spawnInterval;clock.seconds=(clock.seconds||0)+dt;if(clock.seconds<interval)return 0;clock.seconds%=interval;return Math.max(0,Math.min(rules.spawnCount,ENEMY_CAP-aliveCount(enemies)));}
 export function bossZones(e,player){
  const r=(e.enraged?1.85:1.55)*(e.scale?.range||1),aim={x:player.x,z:player.z,radius:r};
  if(e.bossPattern===null||e.bossPattern===undefined)return[aim];
