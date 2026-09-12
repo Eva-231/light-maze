@@ -2,10 +2,11 @@ import {ABYSS_MAX_FLOOR,BOONS,floorRules,EVENT_TYPES} from './abyss-rules.js';
 const copy=x=>JSON.parse(JSON.stringify(x));
 const params=typeof location!=='undefined'?new URLSearchParams(location.search):new URLSearchParams();
 export const ABYSS_TEST_MODE=params.get('test')==='abyss';
-export const ABYSS_TEST_FLOOR=Math.max(1,Math.min(99,Number(params.get('floor'))||1));
+export const ABYSS_TEST_FLOOR=Math.max(1,Math.min(99,Number(params.get('floor'))||80));
+export const ABYSS_TEST_GEAR=['legend','abyss3','abyss5','mythic'].includes(params.get('gear'))?params.get('gear'):'abyss3';
 export const freshAbyss=()=>({unlocked:false,bestFloor:0,cleared99:false,revivalStock:0,checkpoint:null,activeId:null,completedRuns:[],mutators:[]});
 export function canEnterAbyss(p){return ABYSS_TEST_MODE||!!p.chapterStars?.['18'];}
-export function newAbyssRun(p,seed,mutators=[]){if(!canEnterAbyss(p))throw Error('18面クリアで解放');return{id:(seed>>>0).toString(36)+'-'+Date.now().toString(36),seed:seed>>>0,floor:ABYSS_TEST_MODE?ABYSS_TEST_FLOOR:1,route:'normal',mutators:p.abyss?.cleared99?mutators:[],seals:0,cleared:false,bag:0,caches:[],kills:0,elapsed:0,boons:[],hp:null,mp:null,light:null,reviveUsed:false,revivals:0,revivalCharges:Math.min(3,p.abyss?.revivalStock||0),effectState:{},claimed:[],bossFloors:[],status:'exploring',testMode:ABYSS_TEST_MODE};}
+export function newAbyssRun(p,seed,mutators=[]){if(!canEnterAbyss(p))throw Error('18面クリアで解放');return{id:(seed>>>0).toString(36)+'-'+Date.now().toString(36),seed:seed>>>0,floor:ABYSS_TEST_MODE?ABYSS_TEST_FLOOR:1,route:'normal',mutators:p.abyss?.cleared99?mutators:[],seals:0,cleared:false,bag:0,caches:[],kills:0,elapsed:0,boons:[],hp:null,mp:null,light:null,reviveUsed:false,revivals:0,revivalCharges:Math.min(3,p.abyss?.revivalStock||0),effectState:{},claimed:[],bossFloors:[],status:'exploring',testMode:ABYSS_TEST_MODE,testGear:ABYSS_TEST_MODE?ABYSS_TEST_GEAR:''};}
 export const abyssFloorSeed=run=>(run.seed^Math.imul(run.floor,2654435761))>>>0;
 export function gateUnlocked(run){return run.seals===3&&run.cleared===true;}
 export function clearAbyssFloor(run){if(run.seals!==3)return false;run.cleared=true;return true;}
