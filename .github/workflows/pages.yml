@@ -30,28 +30,27 @@ jobs:
           cp -R public _site
           node <<'NODE'
           const fs = require('fs');
-          const path = require('path');
-          const root = '_site';
-          const exts = new Set(['.html','.js','.css']);
-          function walk(dir){
-            for(const ent of fs.readdirSync(dir,{withFileTypes:true})){
-              const p=path.join(dir,ent.name);
-              if(ent.isDirectory()) walk(p);
-              else if(exts.has(path.extname(ent.name))){
-                let s=fs.readFileSync(p,'utf8');
-                s=s.replace(/(["'`(])\/(?!api\/|\/)/g,'$1./');
-                fs.writeFileSync(p,s);
-              }
-            }
-          }
-          walk(root);
+
+          // GitHub project pages live under /light-maze/, so only rewrite
+          // browser resource URLs that are actually site-root absolute.
+          const indexPath = '_site/index.html';
+          let html = fs.readFileSync(indexPath, 'utf8');
+          html = html
+            .replace(/href="\//g, 'href="./')
+            .replace(/src="\//g, 'src="./');
+          fs.writeFileSync(indexPath, html);
+
+          // Audio() resolves these URLs against the page URL. Keep all JS
+          // source code otherwise untouched so regex literals remain valid.
+          const audioPath = '_site/audio.js';
+          let audio = fs.readFileSync(audioPath, 'utf8');
+          audio = audio.replace(/src:'\/audio\//g, "src:'./audio/");
+          fs.writeFileSync(audioPath, audio);
           NODE
           touch _site/.nojekyll
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
