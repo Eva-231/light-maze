@@ -1,23 +1,23 @@
 import {abyssMusicKey} from './abyss-music.js';
 export const MUSIC_TRACKS={
- abyssRitual:{title:'石環の鼓動 · トライバル',src:'./audio/abyss-ritual.mp3?v=13'},
- abyssChip:{title:'星屑の回路 · チップチューン',src:'./audio/abyss-chip.mp3?v=13'},
- abyssPiano:{title:'忘れられた舞踏会 · ピアノワルツ',src:'./audio/abyss-piano.mp3?v=13'},
- abyssBreaks:{title:'黒曜ドライブ · ブレイクビーツ',src:'./audio/abyss-breaks.mp3?v=13'},
- abyssJazz:{title:'地下零時 · ジャズ',src:'./audio/abyss-jazz.mp3?v=13'},
- abyssCosmic:{title:'星のない海 · アンビエント',src:'./audio/abyss-cosmic.mp3?v=13'},
- home:{title:'帰還の灯',src:'./audio/home.mp3?v=13'},
- forge:{title:'星鋳の儀式',src:'./audio/forge.mp3?v=13'},
- stage1:{title:'最初の燐光',src:'./audio/stage-1.mp3?v=13'},
- stage2:{title:'影の足音',src:'./audio/stage-2.mp3?v=13'},
- stage3:{title:'疾走する回廊',src:'./audio/stage-3.mp3?v=13'},
- stage4:{title:'紫晶鉱脈',src:'./audio/stage-4.mp3?v=13'},
- stage5:{title:'転位の残響',src:'./audio/stage-5.mp3?v=13'},
- stage6:{title:'銀光を追え',src:'./audio/stage-6.mp3?v=13'},
- stage7:{title:'深淵の門',src:'./audio/stage-7.mp3?v=13'},
- stage8:{title:'終わらない試練',src:'./audio/stage-8.mp3?v=13'},
- boss:{title:'番人、覚醒',src:'./audio/boss.mp3?v=13'},
- escape:{title:'灯が尽きる前に',src:'./audio/escape.mp3?v=13'}
+ abyssRitual:{title:'石環の鼓動 · トライバル',src:'/audio/abyss-ritual.mp3?v=12'},
+ abyssChip:{title:'星屑の回路 · チップチューン',src:'/audio/abyss-chip.mp3?v=12'},
+ abyssPiano:{title:'忘れられた舞踏会 · ピアノワルツ',src:'/audio/abyss-piano.mp3?v=12'},
+ abyssBreaks:{title:'黒曜ドライブ · ブレイクビーツ',src:'/audio/abyss-breaks.mp3?v=12'},
+ abyssJazz:{title:'地下零時 · ジャズ',src:'/audio/abyss-jazz.mp3?v=12'},
+ abyssCosmic:{title:'星のない海 · アンビエント',src:'/audio/abyss-cosmic.mp3?v=12'},
+ home:{title:'帰還の灯',src:'/audio/home.mp3?v=7'},
+ forge:{title:'星鋳の儀式',src:'/audio/forge.mp3?v=7'},
+ stage1:{title:'最初の燐光',src:'/audio/stage-1.mp3?v=7'},
+ stage2:{title:'影の足音',src:'/audio/stage-2.mp3?v=7'},
+ stage3:{title:'疾走する回廊',src:'/audio/stage-3.mp3?v=7'},
+ stage4:{title:'紫晶鉱脈',src:'/audio/stage-4.mp3?v=7'},
+ stage5:{title:'転位の残響',src:'/audio/stage-5.mp3?v=7'},
+ stage6:{title:'銀光を追え',src:'/audio/stage-6.mp3?v=7'},
+ stage7:{title:'深淵の門',src:'/audio/stage-7.mp3?v=7'},
+ stage8:{title:'終わらない試練',src:'/audio/stage-8.mp3?v=7'},
+ boss:{title:'番人、覚醒',src:'/audio/boss.mp3?v=7'},
+ escape:{title:'灯が尽きる前に',src:'/audio/escape.mp3?v=7'}
 };
 export function musicScene({mode='menu',floor=1,boss=false,collapse=false,forge=false,abyssFloor=0,abyssSeed=0}={}){
  if(forge)return'forge';if(mode==='play'){if(abyssFloor)return abyssMusicKey(abyssSeed,abyssFloor);if(collapse)return'escape';if(boss)return'boss';return'stage'+Math.max(1,Math.min(8,Math.floor(floor||1)));}return'home';
@@ -35,7 +35,7 @@ function installCampNavigationRepair(){
 export class Sound{
  constructor(settings){this.settings=settings;this.context=null;this.duckUntil=0;this.heart=0;this.step=0;this.lastHaptic=0;this.voices=0;this.musicTarget=-1;this.filterTarget=-1;this.currentKey='home';this.pendingKey='home';this.tracks=new Map();this.track=null;this.pauseTimers=new Map();this.unlock=()=>{if(!this.settings.sound)return;this.start();};if(typeof document!=='undefined'){for(const type of ['pointerdown','touchstart','keydown'])document.addEventListener(type,this.unlock,{capture:true,passive:true});installCampNavigationRepair();}}
  ensureTrack(key){
-  if(this.tracks.has(key))return this.tracks.get(key);const meta=MUSIC_TRACKS[key]||MUSIC_TRACKS.home,audio=new Audio(meta.src);audio.loop=true;audio.preload='auto';audio.playsInline=true;audio.setAttribute('playsinline','');const gain=this.context.createGain();gain.gain.value=0;const source=this.context.createMediaElementSource(audio);source.connect(gain);gain.connect(this.musicFilter);const channel={audio,gain,source,key};this.tracks.set(key,channel);return channel;
+  if(this.tracks.has(key))return this.tracks.get(key);const meta=MUSIC_TRACKS[key]||MUSIC_TRACKS.home,audio=new Audio(meta.src);audio.loop=true;audio.preload='auto';audio.playsInline=true;audio.setAttribute?.('playsinline','');const gain=this.context.createGain();gain.gain.value=0;const source=this.context.createMediaElementSource(audio);source.connect(gain);gain.connect(this.musicFilter);const channel={audio,gain,source,key};this.tracks.set(key,channel);return channel;
  }
  switchTrack(key=this.pendingKey,seconds=1.15){
   this.pendingKey=MUSIC_TRACKS[key]?key:'home';if(!this.context)return;const ctx=this.context,old=this.track?this.tracks.get(this.currentKey):null,next=this.ensureTrack(this.pendingKey);if(old===next){this.track=next.audio;if(this.settings.sound&&this.settings.musicVolume!==0)next.audio.play().catch(()=>{});return;}
