@@ -80,7 +80,7 @@ export function resolveDamage(amount,cause,stats,hp,reviveUsed=false){
 export function relicDescription(item){
  const t=Math.min(3,item.tier),r=RELICS[item.type],effects={
  dawn:'光弾の威力 +'+[10,20,40,90][t]+'% · 影兵特効',frost:'氷槍の凍結 +'+[1,1.3,2,3.2][t]+'秒 · 狼/銀光特効',echo:'光弾が近くの敵'+[1,1,2,3][t]+'体に'+[35,50,70,100][t]+'%伝播',soul:'撃破ドロップのMP回復 +'+[2,3,5,9][t],vigor:'最大HP +'+[8,14,24,45][t],mend:'治癒の回復量 +'+[20,35,65,120][t]+'%',moon:'最大MP +'+[8,12,20,36][t],hawk:'会心率 +'+[5,8,12,18][t]+'%',home:'光の容量 +'+[4,8,14,25][t],miner:'採掘速度 +'+[20,35,70,120][t]+'%',gold:'宝の価値 +'+[8,15,25,45][t]+'%',spring:'MP自然回復 +'+[25,50,100,200][t]+'%',swift:'移動速度 ×'+[1.1,1.14,1.20,1.28][t],anchor:'敵の転位術を無効化'+(t?' · 罠ダメージ −'+[0,10,25,45][t]+'%':''),granite:'叩きつけダメージ −'+[35,42,52,65][t]+'%',royal:'弱点への魔法ダメージ +'+[20,35,60,120][t]+'% · 巨兵/術師/番人特効',silver:'光弾の再使用時間 −'+[15,20,30,48][t]+'%',dawnlight:'光の回復アイテムの効果 +'+[25,40,65,110][t]+'%'};
- const intrinsic=t?(r.slot===0?'全攻撃魔法 ×'+[1,1.1,1.25,1.6][t]:r.slot===1?'HP +'+[0,4,10,28][t]+' · 全ダメージ −'+[0,4,10,20][t]+'%':'光容量 +'+[0,2,6,16][t]):'';
+ const g=item.tier,intrinsic=g?(r.slot===0?'全攻撃魔法 ×'+[1,1.1,1.25,1.6,2.05,2.55][g]:r.slot===1?'HP +'+[0,4,10,28,42,60][g]+' · 全ダメージ −'+[0,4,10,20,27,34][g]+'%':'光容量 +'+[0,2,6,16,24,35][g]):'';
  const depth=Math.max(0,Math.min(20,item.depth||0)),depthText=depth?' ／ 深度補正 +'+Math.round(depth*2.5)+'%':'';return (effects[r.key]||r.effect)+((item.extraPowers||[]).length?' ／ '+item.extraPowers.map(k=>POWERS.find(p=>p.key===k)?.effect||k).join(' ／ '):'')+(item.evolved?' ／ 深淵王喰らい：最終火力×1.4':'')+(intrinsic?' ／ '+intrinsic:'')+depthText;
 }
 export function appraisal(progress,seed,{cache=false}={}){

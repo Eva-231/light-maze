@@ -98,7 +98,7 @@ function pickup(item){
 }
 function takeSeal(item){
  if(item.collected||!sealUnlocked(item,enemies))return false;
- item.collected=true;state.seals++;if(has(stats,'sealthief')){state.hp=Math.min(stats.maxHp,state.hp+20);state.mp=Math.min(stats.maxMp,state.mp+20);}if(state.runMode==='abyss'){captureAbyss();clearAbyssFloor(abyssRun);if(state.seals===3&&abyssRun.floor%3===0&&!abyssRun.claimed.includes(abyssRun.floor+':boon'))boonPending=true;}sealFocus=0;sealTarget=-1;world.wave(item.x,item.z);world.burst(item.x,item.z,0,55);sound.chain(state.seals+1);sound.haptic(2);flash(.14);alertEnemies(enemies,state);
+ item.collected=true;state.seals++;if(has(stats,'sealthief')){state.hp=Math.min(stats.maxHp,state.hp+20*(stats.normalHeal??1)*(stats.recoveryScale||1));state.mp=Math.min(stats.maxMp,state.mp+20);}if(state.runMode==='abyss'){captureAbyss();clearAbyssFloor(abyssRun);if(state.seals===3&&abyssRun.floor%3===0&&!abyssRun.claimed.includes(abyssRun.floor+':boon'))boonPending=true;}sealFocus=0;sealTarget=-1;world.wave(item.x,item.z);world.burst(item.x,item.z,0,55);sound.chain(state.seals+1);sound.haptic(2);flash(.14);alertEnemies(enemies,state);
  if(state.seals===state.required&&stageInfo.config.collapse){state.collapse=collapseTime(homeDistance(state.x,state.z));for(const e of enemies){if(e.dead)continue;e.memory=9;e.target=indexAt(state.x,state.z);}event('THE HUNT BEGINS','封印が解けた。崩壊前に入口へ。','#ffc996',5,state.required+' / '+state.required+' SEALS',3);sound.legendary();document.body.classList.add('hunted');}
  else event('SEAL '+state.seals+' / '+state.required,state.seals===state.required?'封印が揃った。入口へ戻ろう。':'次の守護者と封印を探そう。','#d5ffd6',4,'封印解除',2.4);
 }
@@ -182,7 +182,7 @@ function finish(success,abandon=false){
   $('score-parts').innerHTML=Object.entries(score.parts).map(([key,n])=>`<span>${key}<b>${n.toLocaleString()}</b></span>`).join('');$('result-camp').hidden=progress.floor<2;$('result-camp').textContent=success&&!daily&&bankCandidates.length?'持ち帰った遺物 '+(bankCandidates.length-overflow)+'個を鑑定':'装備を確認する';$('share-score').textContent='記録を共有';
   $('result-map-gain').textContent='探索 '+reveal.percent.toFixed(1)+'% · '+state.kills+'撃破';$('result-map-bar').style.width=reveal.percent+'%';$('result-map-total').textContent='図鑑 '+progress.catalog.length+'/'+CATALOG_SIZE+' · 本編 '+Object.entries(progress.chapterStars).filter(([k])=>Number(k)<=18).reduce((n,[,v])=>n+v,0)+'/54★';
   $('retry').innerHTML=(daily?'同条件でタイムを縮める':cleared?state.floor>=7?'次の試練へ':'次の面へ':'同じ面に再挑戦')+' <b>↗</b>';syncMenu();if(success){sound.bank();sound.haptic(2);}else sound.duckUntil=(sound.context?.currentTime||0)+2;
-  rankingPromise.then(data=>{if(lastScore!==rankedRecord||!data?.ranks?.length)return;const wanted=daily?'daily':rankedRecord.floor===8?'abyss':'skill',rank=data.ranks.find(v=>v.board===wanted)||data.ranks[0];if(!rank?.rank)return;const label=wanted==='daily'?'本日最速':wanted==='abyss'?'深淵到達':'世界技量';$('result-world-rank').textContent=label+'  #'+rank.rank+' / '+rank.total;$('result-world-rank').hidden=false;});
+  rankingPromise.then(data=>{if(lastScore!==rankedRecord||!data?.ranks?.length)return;const wanted=daily?'daily':'skill',rank=data.ranks.find(v=>v.board===wanted)||data.ranks[0];if(!rank?.rank)return;const label=wanted==='daily'?'本日最速':wanted==='abyss'?'深淵到達':'世界技量';$('result-world-rank').textContent=label+'  #'+rank.rank+' / '+rank.total;$('result-world-rank').hidden=false;});
  },success?650:1200);
 }
 function formatTime(t){return Math.floor(t/60).toString().padStart(2,'0')+':'+Math.floor(t%60).toString().padStart(2,'0');}
