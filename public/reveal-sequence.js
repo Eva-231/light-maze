@@ -1,6 +1,6 @@
 // Presentation only: every result has already been paid for and saved.
 export class RevealSequence {
- constructor(results,emit,{schedule=setTimeout,cancel=clearTimeout}={}){this.results=results;this.emit=emit;this.schedule=schedule;this.cancel=cancel;this.timers=[];this.done=false;this.index=-1;}
+ constructor(results,emit,{schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id)}={}){this.results=results;this.emit=emit;this.schedule=schedule;this.cancel=cancel;this.timers=[];this.done=false;this.index=-1;}
  after(delay,fn){this.timers.push(this.schedule(()=>{if(!this.done)fn();},delay));}
  start(){this.emit({phase:'gather',index:-1});this.after(1100,()=>this.next());}
  next(){this.index++;if(this.index>=this.results.length){this.finish();return;}const index=this.index,tier=this.results[index].item.tier;
