@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,29 +24,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update overflow integration test once
-        if: github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          p=Path('integration-tests.mjs')
-          s=p.read_text()
-          old="a.progress.caches=Array.from({length:CACHE_LIMIT-2},(_,i)=>({seed:i,quality:0}));a.startRun();assert.equal(a.progress.runs,beforeAttempts);assert(nodes.get('camp-dialog').open);"
-          new="a.progress.caches=Array.from({length:CACHE_LIMIT+1},(_,i)=>({seed:i,quality:0}));a.startRun();assert.equal(a.progress.runs,beforeAttempts);assert(nodes.get('camp-dialog').open);"
-          if new not in s:
-              if old not in s: raise SystemExit('integration overflow marker not found')
-              p.write_text(s.replace(old,new,1))
-          PY
-          if ! git diff --quiet integration-tests.mjs; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add integration-tests.mjs
-            git commit -m "test: block runs only after storage exceeds cap"
-            git push origin HEAD:main
-          fi
-
       - name: Prepare static build
+        # Fail before publication if game/save regression tests fail.
         shell: bash
         run: |
           npm run verify
@@ -54,10 +33,18 @@ jobs:
           cp -R public _site
           node <<'NODE'
           const fs = require('fs');
+
+          // GitHub project pages live under /light-maze/, so only rewrite
+          // browser resource URLs that are actually site-root absolute.
           const indexPath = '_site/index.html';
           let html = fs.readFileSync(indexPath, 'utf8');
-          html = html.replace(/href="\//g, 'href="./').replace(/src="\//g, 'src="./');
+          html = html
+            .replace(/href="\//g, 'href="./')
+            .replace(/src="\//g, 'src="./');
           fs.writeFileSync(indexPath, html);
+
+          // Audio() resolves these URLs against the page URL. Keep all JS
+          // source code otherwise untouched so regex literals remain valid.
           const audioPath = '_site/audio.js';
           let audio = fs.readFileSync(audioPath, 'utf8');
           audio = audio.replace(/src:'\/audio\//g, "src:'./audio/");
