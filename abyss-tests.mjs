@@ -19,6 +19,11 @@ const unlocked=()=>{const p=newProgress();p.floor=18;p.chapterStars['18']=1;p.ab
 const prepareRun=p=>Object.assign(newAbyssRun(p,1207),{hp:100,mp:60,light:100,seals:3,cleared:true,kills:0});
 const findType=key=>RELICS.findIndex(r=>r.key===key&&r.abyss);
 const gear=(key,seed=1)=>rollRelic(seed,2,0,{forcedType:findType(key),abyssFloor:99});
+test('New powers append without reindexing v10 Mythics, and change actual combat state',()=>{
+ assert.equal(findType('reincarnation'),92);assert.equal(findType('eater'),94);assert.equal(findType('twinstar'),96);assert.equal(RELICS.length,104);
+ const s=effectStats({...loadoutStats(newProgress()),powers:['greedlamp','substitute','backlight'],curses:['madking']}),p={hp:100,mp:60,light:100,elapsed:40,effectState:{}};assert.equal(s.lightDrain,1.2);assert.equal(s.lootQuality,.25);assert.equal(damageEffects(s,p,1000,()=>1).damage,99);assert(damageEffects(s,p,1000,()=>1).damage>100);
+ discoverLoadout(Object.assign(unlocked(),{inventory:[gear('twinstar')]}));
+});
 test('Grade scales affixes and material quality; four enchant slots multiply, consume once, and preserve protected items',()=>{
  for(const [f,g] of [[10,1],[30,2],[50,3],[70,4],[90,5]])assert.equal(rollGrade(f,()=>0,true),g);
  const low={...gear('blast',10),abyssGrade:1},high={...low,abyssGrade:5};assert(gradeScale(high)>gradeScale(low));assert(materialStrength(high)>materialStrength(low));assert(materialStrength(low)>materialStrength({tier:3}));
