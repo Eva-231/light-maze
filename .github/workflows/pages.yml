@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,8 +24,92 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Apply endgame loot and overflow rules once
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path); s=p.read_text()
+              if new in s: return
+              if old not in s: raise SystemExit(f'marker not found: {path}: {old[:80]}')
+              p.write_text(s.replace(old,new,1))
+
+          # Deep mining + enemy relics: floor-based minimum Abyss grade.
+          replace('public/relics.js',
+          " if(options.source==='mine'&&(options.abyssFloor||0)>=10)tier=Math.max(tier,4);",
+          " const deepSource=['mine','enemy','elite'].includes(options.source)&&(options.abyssFloor||0)>=10;if(deepSource)tier=Math.max(tier,4);")
+          replace('public/relics.js',
+          " const mineGrade=()=>{const f=options.abyssFloor||10,base=f>=90?4:f>=50?3:2,bonus=f>=90?.15:f>=70?.20:f>=50?.15:.15;return Math.min(5,base+(r()<bonus?1:0));};\n const abyssGrade=tier===4?(options.source==='mine'?mineGrade():rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source))):0,maxRoll=tier===4?50+abyssGrade*10:100;",
+          " const deepGrade=()=>{const f=options.abyssFloor||10,base=f>=90?5:f>=70?4:f>=50?3:2,bonus=f>=90?0:f>=70?.15:f>=50?.15:f>=30?.20:.10;return Math.min(5,base+(r()<bonus?1:0));};\n const abyssGrade=tier===4?(deepSource?deepGrade():rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source))):0,maxRoll=tier===4?50+abyssGrade*10:100;")
+
+          # Cache appraisal may temporarily overflow equipment storage; paid gacha still requires room.
+          replace('public/relics.js',
+          " if(progress.inventory.length>=INVENTORY_LIMIT)return{error:'装備庫が満杯です。不要な装備を売却してください。'};",
+          " if(!cache&&progress.inventory.length>=INVENTORY_LIMIT)return{error:'装備庫が満杯です。不要な装備を売却してください。'};")
+          replace('public/relics.js',
+          "export function appraiseAll(progress){const n=Math.min(progress.caches.length,INVENTORY_LIMIT-progress.inventory.length);if(!n)return{error:'未鑑定の遺物か装備庫の空きを確認してください。'};",
+          "export function appraiseAll(progress){const n=progress.caches.length;if(!n)return{error:'未鑑定の遺物がありません。'};")
+
+          # Endgame 90-99F assumes Grade V; MYTHIC is an advantage, not a requirement.
+          replace('public/journey.js',
+          "export function abyssConfig(floor=1,options={}){const rules=floorRules(floor,options);return{...CHAPTERS[17],id:18,name:'深淵 '+floor+'F',abyss:true,abyssFloor:floor,cols:4,rows:4,seals:3,enemies:rules.initial,kinds:rules.boss?[0,1,2,4,5]:[0,1,2,4],collapse:false,omens:false,traps:!rules.bonus,lightScale:1,trialLevel:0,enemyLevel:rules.level,rules,difficulty:{...DIFFICULTIES[1],key:'abyss',name:'深淵',target:'深度で変化',hp:1.25,damage:1.3,speed:1.08,windup:.85,recovery:.82,trapFuse:.45,trapDamage:24+rules.level*4}};}",
+          "export function abyssConfig(floor=1,options={}){const rules=floorRules(floor,options),endgame=floor>=90?1+Math.min(10,floor-89)*.015:1,endDamage=floor>=90?1+Math.min(10,floor-89)*.009:1;return{...CHAPTERS[17],id:18,name:'深淵 '+floor+'F',abyss:true,abyssFloor:floor,cols:4,rows:4,seals:3,enemies:rules.initial,kinds:rules.boss?[0,1,2,4,5]:[0,1,2,4],collapse:false,omens:false,traps:!rules.bonus,lightScale:1,trialLevel:0,enemyLevel:rules.level,rules,difficulty:{...DIFFICULTIES[1],key:'abyss',name:'深淵',target:floor>=90?'Grade V基準 · MYTHICで余裕':'深度で変化',hp:1.25*endgame,damage:1.3*endDamage,speed:1.08,windup:.85,recovery:.82,trapFuse:.45,trapDamage:24+rules.level*4}};}")
+
+          # Keep all Abyss loot even when cache storage exceeds 300.
+          replace('public/abyss-run.js',
+          "const max=300-p.caches.length,kept=success?Math.min(max,run.caches.length):0;if(success){p.totalBank+=Math.floor(run.bag);p.caches.push(...copy(run.caches.slice(0,max)));if(run.caches.length>max)p.totalBank+=(run.caches.length-max)*300;",
+          "const kept=success?run.caches.length:0;if(success){p.totalBank+=Math.floor(run.bag);p.caches.push(...copy(run.caches));")
+
+          # Game: import inventory limit, tag enemy relics with Abyss depth/source, keep overflow, block next run until organized.
+          replace('public/game.js',
+          "import {loadoutStats,calculateScore,dailyChallenge,random as seededRandom,claimMilestoneGifts,RELICS,CATALOG_SIZE,CACHE_LIMIT,resolveDamage,rewardPrecisionEvade} from './relics.js';",
+          "import {loadoutStats,calculateScore,dailyChallenge,random as seededRandom,claimMilestoneGifts,RELICS,CATALOG_SIZE,CACHE_LIMIT,INVENTORY_LIMIT,resolveDamage,rewardPrecisionEvade} from './relics.js';")
+          replace('public/game.js',
+          " if(runMode!=='daily'&&selectedStage>=7&&progress.caches.length>CACHE_LIMIT-3){camp.open('forge');$('appraisal-result').textContent='突破報酬のために、未鑑定の遺物を3枠空けてください。';return;}",
+          " if(progress.inventory.length>INVENTORY_LIMIT||progress.caches.length>CACHE_LIMIT){camp.open(progress.inventory.length>INVENTORY_LIMIT?'loadout':'forge');queueMicrotask(()=>{const el=$('inventory-message')||$('appraisal-result');if(el)el.textContent='装備ボックスが上限を超えています。獲得品は保持されています。300個以下まで売却・分解して整理すると次のダンジョンに入れます。';});return;}")
+          replace('public/game.js',
+          "function addCache(seed,quality,extra={}){if(state.caches.length>=CACHE_LIMIT){if(extra.minTier!==undefined||extra.mythic){const at=state.caches.findIndex(t=>!t.mythic&&(t.minTier||0)<(extra.minTier||5));if(at>=0){state.caches.splice(at,1);state.bag+=300;warning('戦利品上限：低位遺物を¥300へ変換し保証報酬を保持',3);}else{warning('戦利品が300個で満杯です。帰還して鑑定してください',3);return;}}else{state.bag+=300;warning('戦利品上限：追加の遺物を¥300へ変換',3);return;}}state.caches.push({seed:seed>>>0,quality,...(state.runMode==='abyss'?{abyssFloor:abyssRun.floor,qualityBoost:lootQuality(stats,state)+(stageInfo.config.rules?.quality||0),source:'mine'}:{}),...extra});}",
+          "function addCache(seed,quality,extra={}){if(state.caches.length===CACHE_LIMIT)warning('戦利品ボックスが上限を超えます。獲得品は保持し、帰還後に整理してください。',4);state.caches.push({seed:seed>>>0,quality,...(state.runMode==='abyss'?{abyssFloor:abyssRun.floor,qualityBoost:lootQuality(stats,state)+(stageInfo.config.rules?.quality||0),source:'mine'}:{}),...extra});}")
+          replace('public/game.js',
+          "const loot=enemyDrops(e,state.seed);for(const d of loot){d.id=dropSerial++;if(d.kind==='essence')",
+          "const loot=enemyDrops(e,state.seed);for(const d of loot){d.id=dropSerial++;if(state.runMode==='abyss'&&d.kind==='relic'){d.abyssFloor=abyssRun.floor;d.source=e.elite?'elite':'enemy';}if(d.kind==='essence')")
+          replace('public/game.js',
+          "const free=CACHE_LIMIT-progress.caches.length;overflow=Math.max(0,bankCandidates.length-free);progress.caches.push(...bankCandidates.slice(0,free));progress.totalBank+=overflow*300;",
+          "progress.caches.push(...bankCandidates);overflow=Math.max(0,progress.caches.length-CACHE_LIMIT);")
+          replace('public/game.js',
+          "if(overflow)$('result-message').textContent+=' 保管上限超過の遺物'+overflow+'個を'+money(overflow*300)+'に変換。';",
+          "if(overflow)$('result-message').textContent+=' 装備ボックスが上限を'+overflow+'個超えています。獲得品は保持済みです。次の探索前に整理してください。';")
+
+          # Camp UI: allow cache appraisal beyond cap and clearly prompt cleanup.
+          replace('public/camp.js',
+          "import {RELICS,RARITIES,SLOTS,AFFIXES,DRAW_COST,INVENTORY_LIMIT,affixValue,relicQuality,relicPower,salvageValue,loadoutStats,appraisal,appraisalBatch,appraiseAll,workshop,catalogKey,dailyChallenge,relicDescription,CATALOG_SIZE,toggleFavorite,sellRelic} from './relics.js';",
+          "import {RELICS,RARITIES,SLOTS,AFFIXES,DRAW_COST,INVENTORY_LIMIT,CACHE_LIMIT,affixValue,relicQuality,relicPower,salvageValue,loadoutStats,appraisal,appraisalBatch,appraiseAll,workshop,catalogKey,dailyChallenge,relicDescription,CATALOG_SIZE,toggleFavorite,sellRelic} from './relics.js';")
+          replace('public/camp.js',
+          "function summary(){const p=getProgress();$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備';}",
+          "function summary(){const p=getProgress(),over=Math.max(0,p.inventory.length-INVENTORY_LIMIT),cacheOver=Math.max(0,p.caches.length-CACHE_LIMIT);$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備'+(over?' · '+over+'超過':'')+(cacheOver?' · 未鑑定'+cacheOver+'超過':'');}")
+          replace('public/camp.js',
+          "$('appraise-all').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;",
+          "$('appraise-all').disabled=busy||!canChange()||!p.caches.length;")
+          replace('public/camp.js',
+          "$('appraise-cache').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;",
+          "$('appraise-cache').disabled=busy||!canChange()||!p.caches.length;")
+          replace('public/camp.js',
+          "$('inventory-message').textContent=favoritesOnly&&!items.length?'この枠にお気に入りはありません。':'★を付けた装備は、売却ボタンがロックされます。';",
+          "$('inventory-message').textContent=p.inventory.length>INVENTORY_LIMIT?'装備ボックスが上限超過中です。獲得品は保持されています。300個以下まで売却・分解すると次のダンジョンに入れます。':favoritesOnly&&!items.length?'この枠にお気に入りはありません。':'★を付けた装備は、売却ボタンがロックされます。';")
+
+          PY
+          if ! git diff --quiet public/relics.js public/journey.js public/abyss-run.js public/game.js public/camp.js; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/relics.js public/journey.js public/abyss-run.js public/game.js public/camp.js
+            git commit -m "balance: Grade V endgame loot and overflow storage"
+            git push origin HEAD:main
+          fi
+
       - name: Prepare static build
-        # Fail before publication if game/save regression tests fail.
         shell: bash
         run: |
           npm run verify
@@ -33,18 +117,10 @@ jobs:
           cp -R public _site
           node <<'NODE'
           const fs = require('fs');
-
-          // GitHub project pages live under /light-maze/, so only rewrite
-          // browser resource URLs that are actually site-root absolute.
           const indexPath = '_site/index.html';
           let html = fs.readFileSync(indexPath, 'utf8');
-          html = html
-            .replace(/href="\//g, 'href="./')
-            .replace(/src="\//g, 'src="./');
+          html = html.replace(/href="\//g, 'href="./').replace(/src="\//g, 'src="./');
           fs.writeFileSync(indexPath, html);
-
-          // Audio() resolves these URLs against the page URL. Keep all JS
-          // source code otherwise untouched so regex literals remain valid.
           const audioPath = '_site/audio.js';
           let audio = fs.readFileSync(audioPath, 'utf8');
           audio = audio.replace(/src:'\/audio\//g, "src:'./audio/");
