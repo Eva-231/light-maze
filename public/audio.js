@@ -1,4 +1,11 @@
+import {abyssMusicKey} from './abyss-music.js';
 export const MUSIC_TRACKS={
+ abyssRitual:{title:'石環の鼓動 · トライバル',src:'/audio/abyss-ritual.mp3?v=12'},
+ abyssChip:{title:'星屑の回路 · チップチューン',src:'/audio/abyss-chip.mp3?v=12'},
+ abyssPiano:{title:'忘れられた舞踏会 · ピアノワルツ',src:'/audio/abyss-piano.mp3?v=12'},
+ abyssBreaks:{title:'黒曜ドライブ · ブレイクビーツ',src:'/audio/abyss-breaks.mp3?v=12'},
+ abyssJazz:{title:'地下零時 · ジャズ',src:'/audio/abyss-jazz.mp3?v=12'},
+ abyssCosmic:{title:'星のない海 · アンビエント',src:'/audio/abyss-cosmic.mp3?v=12'},
  home:{title:'帰還の灯',src:'/audio/home.mp3?v=7'},
  forge:{title:'星鋳の儀式',src:'/audio/forge.mp3?v=7'},
  stage1:{title:'最初の燐光',src:'/audio/stage-1.mp3?v=7'},
@@ -12,8 +19,8 @@ export const MUSIC_TRACKS={
  boss:{title:'番人、覚醒',src:'/audio/boss.mp3?v=7'},
  escape:{title:'灯が尽きる前に',src:'/audio/escape.mp3?v=7'}
 };
-export function musicScene({mode='menu',floor=1,boss=false,collapse=false,forge=false}={}){
- if(forge)return'forge';if(mode==='play'){if(collapse)return'escape';if(boss)return'boss';return'stage'+Math.max(1,Math.min(8,Math.floor(floor||1)));}return'home';
+export function musicScene({mode='menu',floor=1,boss=false,collapse=false,forge=false,abyssFloor=0,abyssSeed=0}={}){
+ if(forge)return'forge';if(mode==='play'){if(abyssFloor)return abyssMusicKey(abyssSeed,abyssFloor);if(collapse)return'escape';if(boss)return'boss';return'stage'+Math.max(1,Math.min(8,Math.floor(floor||1)));}return'home';
 }
 export class Sound{
  constructor(settings){this.settings=settings;this.context=null;this.duckUntil=0;this.heart=0;this.step=0;this.lastHaptic=0;this.voices=0;this.musicTarget=-1;this.filterTarget=-1;this.currentKey='home';this.pendingKey='home';this.tracks=new Map();this.track=null;this.pauseTimers=new Map();}
@@ -52,7 +59,7 @@ export class Sound{
   this.setScene({...scene,mode:scene.mode||(playing?'play':'menu'),floor,collapse});const ctx=this.context;if(!ctx)return;const scale=!playing?.72:light<5?.015:light<15?.19:light<30?.68:1;
   const target=ctx.currentTime<this.duckUntil?0:Math.max(0,this.settings.musicVolume??.65)*1.08*scale;
   if(Math.abs(target-this.musicTarget)>.003){this.musicTarget=target;this.music.gain.cancelScheduledValues(ctx.currentTime);this.music.gain.setTargetAtTime(target,ctx.currentTime,.34);}
-  const cutoff=light<15?900:collapse?2900:floor>=6?3600:5200;if(cutoff!==this.filterTarget){this.filterTarget=cutoff;this.musicFilter.frequency.setTargetAtTime(cutoff,ctx.currentTime,.65);}
+  const cutoff=light<15?900:collapse?2900:scene.abyssFloor?12000:floor>=6?3600:5200;if(cutoff!==this.filterTarget){this.filterTarget=cutoff;this.musicFilter.frequency.setTargetAtTime(cutoff,ctx.currentTime,.65);}
   if(!playing||!this.settings.sound)return;this.heart-=dt;this.step-=dt;
   if(light<30&&this.heart<=0){this.heart=light<5?.57:light<15?.82:1.3;this.note(48,.15,light<15?.13:.055);this.note(43,.13,.07,.16);}
   if(moving&&this.step<=0){this.step=.40;const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();src.buffer=this.noise;filter.type='lowpass';filter.frequency.value=350;gain.gain.value=.11;src.connect(filter);filter.connect(gain);gain.connect(this.master);src.start();src.onended=()=>{src.disconnect();filter.disconnect();gain.disconnect();};}

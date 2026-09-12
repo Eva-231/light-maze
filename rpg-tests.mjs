@@ -21,7 +21,7 @@ test('Wall occlusion, freezing, weak-point timing and recovery produce distinct 
  p.mp=60;r=castSpell(2,[],p,stats);assert.equal(r.heal,5);assert.equal(p.hp,100);const m=p.mp;assert(!castSpell(2,[],p,stats).ok);assert.equal(p.mp,m);
 });
 test('Veins, omens, supplies and traps are deterministic and reachable across 80 maps',()=>{
- const omens=new Set();for(let seed=1;seed<=80;seed++){core.generateStage(seed*7193,1+seed%8);const exp=expeditionPlan();assert.deepEqual(exp,expeditionPlan());omens.add(exp.omen.name);assert(core.stageInfo.config.mine?exp.veins.length>=4:exp.veins.length===0);assert(core.stageInfo.config.traps?exp.traps.length>0:exp.traps.length===0);if(!core.stageInfo.config.omens)assert.equal(exp.omen.name,'静かな迷宮');
+ const omens=new Set();for(let seed=1;seed<=80;seed++){core.generateStage(seed*7193,1+seed%8);const exp=expeditionPlan();assert.deepEqual(exp,expeditionPlan());omens.add(exp.omen.name);assert(core.stageInfo.config.mine?exp.veins.length<=2:exp.veins.length===0);assert(core.stageInfo.config.traps?exp.traps.length>0:exp.traps.length===0);if(!core.stageInfo.config.omens)assert.equal(exp.omen.name,'静かな迷宮');
   for(const v of exp.veins){const x=v.x-v.dx*1.4,z=v.z-v.dz*1.4;assert(core.canStand(x,z));assert(core.lineOfSight(x,z,v.x,v.z));assert(core.distances[core.indexAt(x,z)]>10);assert(v.rewards.at(-1).cache);assert(v.quality<=2);}
   for(const a of exp.supplies)assert(core.canStand(a.x,a.z));for(const t of exp.traps)assert(core.distances[core.indexAt(t.x,t.z)]>15);
  }assert.equal(omens.size,5);

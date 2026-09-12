@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {MovementInput} from './public/input.js';
+import {PointerContacts} from './public/pointer-contacts.js';
 import {Save,newProgress,balance} from './public/save.js';
 import {appraisal,appraisalBatch,rollRelic,INVENTORY_LIMIT} from './public/relics.js';
 import {buildEquipmentAvatar,disposeAvatar} from './public/avatar.js';
 import {Sound} from './public/audio.js';
 import worker from './src/worker.js';
 let passed=0;const test=async(name,fn)=>{await fn();passed++;console.log('PASS',name);};
+await test('Touch fallback releases only the ended identifier, including nonmatching pointer IDs and cancel',()=>{
+ const contacts=new PointerContacts(),p=(id,x)=>({pointerId:id,pointerType:'touch',clientX:x,clientY:600}),t=(id,x)=>({identifier:id,clientX:x,clientY:600});
+ contacts.begin(p(41,50));contacts.bind([t(0,50)]);contacts.begin(p(72,300));contacts.bind([t(0,50),t(1,300)]);
+ assert.deepEqual(contacts.reconcile([t(1,320)]),[41]);assert(contacts.contacts.has(72));assert.deepEqual(contacts.reconcile([]),[72]);
+ contacts.bind([t(8,80)]);contacts.begin(p(99,80));assert.deepEqual(contacts.reconcile([]),[99]);contacts.begin(p(7,30));contacts.reset();assert.equal(contacts.contacts.size,0);
+});
 await test('Two-thumb input keeps movement and look independent across iOS buttons=0 events, releases, and stalled frames',()=>{
  const input=new MovementInput();assert.equal(input.begin(1,60,650,390),'move');assert.equal(input.begin(2,320,650,390),'look');assert.equal(input.begin(3,100,640,390),null);input.move(1,60,608);assert.equal(input.y,1);input.move(2,330,655);assert.equal(input.y,1);
  for(let i=0;i<10000;i++)input.guard(.016,()=>true);assert.equal(input.y,1,'A stationary held thumb must not time out');input.release(2);assert.equal(input.y,1);input.release(1);assert.equal(input.y,0);
@@ -61,11 +68,11 @@ await test('Stale tabs and reset snapshots cannot overwrite a newer save; pendin
 });
 await test('Anonymous browsers are isolated, retain backups, and can migrate old device or signed-in progress without email',async()=>{
  const {env,network}=fixture(),s=new Save(()=>{}),p=await s.load(),firstToken=storage.get(ANONYMOUS_KEY);p.totalBank=1000;await s.save(p);p.totalBank=2000;await s.save(p);const key=[...env.BUCKET.data.keys()].find(value=>value.startsWith('light-maze/v2/anonymous/')&&!value.includes('.backup'));assert(key);assert.equal(JSON.parse(env.BUCKET.data.get(key+'.backup').body).totalBank,1000);
- storage.set(ANONYMOUS_KEY,'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');network.owner='';const guest=new Save(()=>{}),guestProgress=await guest.load();assert(guest.loaded&&!guest.guest&&guest.identity==='anonymous');guestProgress.totalBank=777;assert(await guest.save(guestProgress));guestProgress.totalBank=888;assert(await guest.save(guestProgress));assert.equal((await new Save(()=>{}).load()).totalBank,888);assert.equal(guestProgress.format,7);
+ storage.set(ANONYMOUS_KEY,'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');network.owner='';const guest=new Save(()=>{}),guestProgress=await guest.load();assert(guest.loaded&&!guest.guest&&guest.identity==='anonymous');guestProgress.totalBank=777;assert(await guest.save(guestProgress));guestProgress.totalBank=888;assert(await guest.save(guestProgress));assert.equal((await new Save(()=>{}).load()).totalBank,888);assert.equal(guestProgress.format,8);
  storage.set(ANONYMOUS_KEY,firstToken);network.owner='player-a';assert.equal((await new Save(()=>{}).load()).totalBank,2000);env.BUCKET.data.get(key).body='{broken';assert.equal((await new Save(()=>{}).load()).totalBank,1000);
  env.BUCKET.data.get(key).body=JSON.stringify({...p,catalog:null});const recovery=new Save(()=>{}),recovered=await recovery.load();assert.equal(recovered.totalBank,1000);recovered.totalBank+=100;assert.equal(await recovery.save(recovered),true);assert.equal((await new Save(()=>{}).load()).totalBank,1100);
  const legacy={...newProgress(),playerName:'旧探索者',totalBank:4321};env.BUCKET.data.set('light-maze/v1/legacy-player.json',{body:JSON.stringify(legacy),etag:'legacy-r1',customMetadata:{}});storage.set(ANONYMOUS_KEY,'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC');network.owner='legacy-player';assert.equal((await new Save(()=>{}).load()).totalBank,4321);
- storage.clear();storage.set('light-maze-guest-progress',JSON.stringify({...newProgress(),format:6,totalBank:6543}));network.owner='';const migrated=await new Save(()=>{}).load();assert.equal(migrated.totalBank,6543);assert.equal(migrated.format,7);
+ storage.clear();storage.set('light-maze-guest-progress',JSON.stringify({...newProgress(),format:6,totalBank:6543}));network.owner='';const migrated=await new Save(()=>{}).load();assert.equal(migrated.totalBank,6543);assert.equal(migrated.format,8);
 });
 await test('The 3D avatar reflects equipped weapon and armor, adds ornament for higher rarity, and disposes geometry and materials',()=>{
  const make=tier=>{const p=newProgress();p.inventory=[rollRelic(8,0,0,{forcedType:15,minTier:tier}),rollRelic(9,0,0,{forcedType:13,minTier:tier})];p.inventory.forEach(i=>i.tier=tier);p.equipped=[p.inventory[0].id,p.inventory[1].id,''];return buildEquipmentAvatar(p);};const common=make(0),legend=make(3);assert.equal(legend.group.userData.staffType,15);assert.equal(legend.group.userData.armorType,13);assert.equal(legend.group.userData.tier,3);assert(legend.animated.length>common.animated.length);let disposed=0;const geos=new Set();legend.group.traverse(o=>{assert(o.position.toArray().every(Number.isFinite));if(o.geometry)geos.add(o.geometry);});for(const g of geos)g.addEventListener('dispose',()=>disposed++);disposeAvatar(legend.group);assert.equal(disposed,geos.size);disposeAvatar(common.group);

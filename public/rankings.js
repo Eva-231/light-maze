@@ -1,5 +1,5 @@
 export const RANKING_RULES=8;
-export const RANKING_BOARDS={daily:{label:'本日最速',empty:'本日の突破者はまだいません。最初の記録を刻もう。'},abyss:{label:'深淵到達',empty:'深淵試練の突破記録はまだありません。'},skill:{label:'世界技量',empty:'突破記録はまだありません。'}};
+export const RANKING_BOARDS={daily:{label:'本日最速',empty:'本日の突破者はまだいません。最初の記録を刻もう。'},abyss:{label:'深淵到達',empty:'99F深淵の帰還記録はまだありません。'},skill:{label:'世界技量',empty:'突破記録はまだありません。'}};
 
 export function normalizePlayerName(value){
  const name=String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ');
@@ -7,8 +7,8 @@ export function normalizePlayerName(value){
  return name;
 }
 
-const metric=(entry,board)=>board==='daily'?(entry.elapsedMs/1000).toFixed(2)+'秒':board==='abyss'?'Lv '+entry.trialLevel:entry.score.toLocaleString('ja-JP')+'点';
-const detail=(entry,board)=>board==='daily'?'技量 '+entry.score.toLocaleString('ja-JP'):board==='abyss'?'技量 '+entry.score.toLocaleString('ja-JP')+' · '+(entry.elapsedMs/1000).toFixed(1)+'秒':entry.floor===8?'深淵 Lv'+entry.trialLevel:entry.floor+'面突破';
+const metric=(entry,board)=>board==='daily'?(entry.elapsedMs/1000).toFixed(2)+'秒':board==='abyss'?entry.trialLevel+'F':entry.score.toLocaleString('ja-JP')+'点';
+const detail=(entry,board)=>board==='daily'?'技量 '+entry.score.toLocaleString('ja-JP'):board==='abyss'?'技量 '+entry.score.toLocaleString('ja-JP')+' · '+(entry.elapsedMs/1000).toFixed(1)+'秒':entry.floor+'面突破';
 
 export class Rankings{
  constructor({save,getProgress,changed,sound}){
@@ -21,7 +21,7 @@ export class Rankings{
  syncName(){const p=this.getProgress();this.$('player-name').value=p.playerName||'';this.$('ranking-privacy').textContent='公開されるのはプレイヤーネームと記録だけ。メールアドレス・復旧キーは表示しません。';}
  show(board=this.board){if(RANKING_BOARDS[board])this.board=board;this.syncName();for(const b of document.querySelectorAll('[data-ranking-board]'))b.setAttribute('aria-selected',String(b.dataset.rankingBoard===this.board));this.load();}
  render(data){
-  const entries=data.entries||[],board=data.board;this.$('ranking-period').textContent=data.period==='all'?'ALL TIME':data.period+' · JST';
+  const entries=data.entries||[],board=data.board;this.$('ranking-period').textContent=data.period.includes('v10')?'V10 SEASON':data.period==='all'?'ALL TIME':data.period+' · JST';
   this.$('ranking-list').innerHTML=entries.length?entries.map(entry=>`<div class="ranking-row ${entry.mine?'mine':''}"><b>${entry.rank}</b><span><strong>${escapeHtml(entry.playerName)}</strong><small>${detail(entry,board)}</small></span><em>${metric(entry,board)}</em></div>`).join(''):`<p class="empty-note">${RANKING_BOARDS[board].empty}</p>`;
   const own=data.own;this.$('own-ranking').hidden=!own;if(own){const gap=own.gap?` · 次まで ${escapeHtml(own.gap)}`:'';this.$('own-ranking').innerHTML=`<span>YOUR RANK</span><strong>#${own.rank}</strong><p>${metric(own,board)}${gap} · ${data.total}人中</p>`;}
   this.$('ranking-state').textContent='上位50名 · ベスト記録だけを反映';

@@ -1,10 +1,11 @@
-import {mkdir,cp,rm} from 'node:fs/promises';
+import {mkdir,cp,rm,readFile,writeFile} from 'node:fs/promises';
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist/server',{recursive:true});
 await mkdir('dist/.openai',{recursive:true});
 await cp('public','dist/client',{recursive:true});
-await cp('src/worker.js','dist/server/index.js');
+await writeFile('dist/server/index.js',(await readFile('src/worker.js','utf8')).replace("../public/save-schema.js","../client/save-schema.js"));
 await cp('standalone','dist/standalone',{recursive:true});
+await writeFile('dist/standalone/server.mjs',(await readFile('standalone/server.mjs','utf8')).replace("../src/worker.js","../server/index.js").replace("join(root,'public')","join(root,'client')"));
 await cp('package.json','dist/package.json');
 await cp('MIGRATION_REPORT.md','dist/MIGRATION_REPORT.md');
 await cp('.openai/hosting.json','dist/.openai/hosting.json');

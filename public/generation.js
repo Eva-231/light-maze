@@ -1,4 +1,4 @@
-import {chapterConfig,DIFFICULTIES} from './journey.js';
+import {chapterConfig,abyssConfig,DIFFICULTIES} from './journey.js';
 export const S=3.4,SPEED=4.2,MASK=256,FLASH_COST=8,FLASH_COOLDOWN=6;
 export let SEALS_REQUIRED=3;
 export let W=35,H=40,grid=new Int16Array(),cells=[],rooms=[],distances=new Int16Array(),nextHome=new Int16Array(),homeIndex=0;
@@ -12,8 +12,8 @@ export const neighbors=i=>{const x=i%W,z=Math.floor(i/W);return [[x+1,z],[x-1,z]
 export function shortestPath(from,to){if(from===to)return[from];const parent=new Int16Array(W*H).fill(-1),queue=[from];parent[from]=from;for(let j=0;j<queue.length;j++)for(const n of neighbors(queue[j]))if(parent[n]<0){parent[n]=queue[j];if(n===to){const result=[n];while(result[result.length-1]!==from)result.push(parent[result[result.length-1]]);return result.reverse();}queue.push(n);}return[];}
 export function distanceField(target){const result=new Int16Array(W*H).fill(-1),queue=[target];result[target]=0;for(let j=0;j<queue.length;j++)for(const n of neighbors(queue[j]))if(result[n]<0){result[n]=result[queue[j]]+1;queue.push(n);}return result;}
 export function optimalSealRoute(relics=stageInfo.relics){const targets=relics.map(r=>indexAt(r.x,r.z)),permutations=a=>a.length?a.flatMap((v,i)=>permutations(a.filter((_,j)=>i!==j)).map(t=>[v,...t])):[[]],orders=permutations(targets.map((_,i)=>i));let best={steps:Infinity,order:[]};const fields=[distanceField(homeIndex),...targets.map(distanceField)];for(const order of orders){const points=[0,...order.map(i=>i+1),0],indices=[homeIndex,...targets];let steps=0;for(let i=1;i<points.length;i++)steps+=fields[points[i-1]][indices[points[i]]];if(steps<best.steps)best={steps,order};}return best;}
-export function generateStage(seed=1,floor=1,trialLevel=1,daily=false){
- const config={...chapterConfig(floor,trialLevel),...(daily?{difficulty:DIFFICULTIES[1]}:{})},random=rng(seed),difficulty=clamp(floor-2,0,7)+Math.min(10,Math.max(0,config.trialLevel-1))*.45,cols=config.cols,rows=config.rows;stageInfo.config=config;SEALS_REQUIRED=config.seals;
+export function generateStage(seed=1,floor=1,trialLevel=1,daily=false,options={}){
+ const config={...(options.abyssFloor?abyssConfig(options.abyssFloor,options):chapterConfig(floor,trialLevel)),...(daily?{difficulty:DIFFICULTIES[1]}:{})},random=rng(seed),difficulty=clamp(floor-2,0,7)+Math.min(10,Math.max(0,config.trialLevel-1))*.45,cols=config.cols,rows=config.rows;stageInfo.config=config;SEALS_REQUIRED=config.seals;
  W=cols*8+3;H=rows*8+8;grid=new Int16Array(W*H).fill(-1);cells=[];rooms=[];START.x=Math.floor(W/2)*S;START.z=(H-3)*S;
  const names=['静寂の回廊','紫晶の祭壇','反響の間','光の樹','崩れた書庫','水鏡の庭','忘却の礼拝堂','夜の天文台','眠れる巨像','黒曜の祈り','王の回廊','灰の聖堂'];
  const carve=(x,z,id=-2)=>{if(x>0&&x<W-1&&z>0&&z<H-1&&grid[z*W+x]===-1)grid[z*W+x]=id;};
@@ -34,7 +34,7 @@ export function generateStage(seed=1,floor=1,trialLevel=1,daily=false){
  const selected=[],fields=[];for(const fraction of (config.seals===1?[.72]:config.seals===2?[.5,.88]:[.46,.73,.94])){const options=depths.filter(v=>!selected.some(s=>s.id===v.room.id)).map(v=>({...v,score:Math.abs(v.depth-maxDepth*fraction)+(fields.length?Math.max(0,9-Math.min(...fields.map(f=>f[v.room.z*W+v.room.x])))*3:0)+((v.room.id*31+(seed>>>0))%7)*.2})).sort((a,b)=>a.score-b.score);selected.push(options[0].room);fields.push(distanceField(options[0].room.z*W+options[0].room.x));}
  stageInfo.seed=seed>>>0;stageInfo.floor=floor;stageInfo.difficulty=difficulty;stageInfo.relics=selected.map((r,id)=>({id,room:r.id,x:r.x*S,z:r.z*S,collected:false,guardId:null}));
  stageInfo.jackpotRoom=depths.slice().reverse().find(v=>!selected.some(r=>r.id===v.room.id)).room.id;rooms[stageInfo.jackpotRoom].name='黄金の宝物庫';
- stageInfo.optimalSteps=optimalSealRoute().steps;stageInfo.enemyCount=config.enemies+Math.min(3,Math.floor(Math.max(0,config.trialLevel-1)/3));
+ stageInfo.optimalSteps=optimalSealRoute().steps;stageInfo.enemyCount=Math.min(20,config.enemies);
  const idealSeconds=stageInfo.optimalSteps*S/SPEED;stageInfo.baseDrain=clamp(64/(idealSeconds*1.45+22),.22,.50)*config.lightScale*(1+Math.min(.45,Math.max(0,config.trialLevel-1)*.025));stageInfo.parTime=Math.ceil(idealSeconds*1.45+config.enemies*5+config.seals*2+12);return stageInfo;
 }
 export function homeDistance(x,z){const i=indexAt(x,z);if(i===homeIndex)return Math.hypot(x-START.x,z-START.z);const n=nextHome[i];return Math.max(0,(distances[i]-1)*S+Math.hypot(x-(n%W)*S,z-Math.floor(n/W)*S));}
@@ -51,5 +51,5 @@ export function treasurePlan(run=0){const random=rng(stageInfo.seed^run^0x54778)
  const first=cells.filter(i=>distances[i]>=4&&distances[i]<8);add(first[Math.floor(random()*first.length)],0);
  for(const r of rooms.slice(1)){const options=r.tiles.filter(i=>distances[i]>7&&!used.has(i));if(!options.length)continue;const depth=distances[r.z*W+r.x]/maxDepth,count=r.id===stageInfo.jackpotRoom?5:1+(random()<.4?1:0);for(let j=0;j<count&&options.length;j++){const at=Math.floor(random()*options.length),i=options.splice(at,1)[0],roll=random(),tier=stageInfo.floor===1?0:r.id===stageInfo.jackpotRoom?(j===0?3:j%2+1):depth>.78&&roll>.94?3:depth>.52&&roll>.68?2:roll>.4?1:0;add(i,tier);}}return out;
 }
-export function orbPlan(){const available=rooms.slice(1).sort((a,b)=>distances[a.z*W+a.x]-distances[b.z*W+b.x]),count=Math.min(available.length,stageInfo.floor<=2?3:5),selected=[];for(let i=0;i<count;i++){const r=available[Math.floor(i*(available.length-1)/Math.max(1,count-1))];selected.push({x:r.x*S-.6,z:r.z*S+.55,collected:false,amount:stageInfo.floor<=2?16:18});}return selected;}
+export function orbPlan(){const available=rooms.slice(1).sort((a,b)=>distances[a.z*W+a.x]-distances[b.z*W+b.x]),count=Math.min(available.length,stageInfo.config.rules?.boss?12:stageInfo.floor<=2?3:5),selected=[];for(let i=0;i<count;i++){const r=available[Math.floor(i*(available.length-1)/Math.max(1,count-1))];selected.push({x:r.x*S-.6,z:r.z*S+.55,collected:false,amount:stageInfo.config.rules?.boss?28:stageInfo.floor<=2?16:18});}return selected;}
 generateStage(9274,1);

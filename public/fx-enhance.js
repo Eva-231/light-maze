@@ -6,7 +6,8 @@ const additive=(color,opacity=.4)=>new T.MeshBasicMaterial({
 });
 
 function transientStore(world){return world._cinematicFx??=([]);}
-function addTransient(world,mesh,life,update){world.root.add(mesh);transientStore(world).push({mesh,life,age:0,update});return mesh;}
+function disposeFx(mesh){mesh.removeFromParent();mesh.traverse(o=>{o.geometry?.dispose();for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[])m.dispose();});}
+function addTransient(world,mesh,life,update){const list=transientStore(world);if(list.length>=48)disposeFx(list.shift().mesh);world.root.add(mesh);transientStore(world).push({mesh,life,age:0,update});return mesh;}
 function updateTransients(world,dt){
   const list=transientStore(world);
   for(let i=list.length-1;i>=0;i--){
@@ -44,8 +45,8 @@ function setLine(mesh,from,to){const d=to.clone().sub(from),len=Math.max(.001,d.
 function hideBossFx(fx){for(const m of Object.values(fx))m.visible=false;}
 function enhanceBossTelegraph(world,time){
   for(const entry of world.enemyMeshes||[]){const e=entry.enemy;if(e.kind!==5)continue;const fx=ensureBossFx(world,e),rift=e.windup>0&&e.attackKind==='rift'&&e.attackAim;
-    if(!rift){hideBossFx(fx);continue;}
-    const radius=e.enraged?1.85:1.55,progress=Math.max(0,Math.min(1,1-e.windup/(e.windupMax||1))),pulse=1+Math.sin(time*20)*(.04+.05*progress),x=e.attackAim.x,z=e.attackAim.z;
+    if(!rift||e.dead||e.escaped){hideBossFx(fx);continue;}
+    const radius=e.attackRadius||(e.enraged?1.85:1.55),progress=Math.max(0,Math.min(1,1-e.windup/(e.windupMax||1))),pulse=1+Math.sin(time*20)*(.04+.05*progress),x=e.attackAim.x,z=e.attackAim.z;
     for(const m of [fx.outer,fx.mid,fx.fill]){m.visible=true;m.position.set(x,.045,z);}
     fx.outer.scale.setScalar(radius*(1.03+.09*progress)*pulse);fx.mid.scale.setScalar(radius*(.72+.16*progress));fx.fill.scale.setScalar(radius*(.52+.48*progress));
     fx.outer.material.opacity=.42+.40*progress;fx.mid.material.opacity=.30+.42*progress;fx.fill.material.opacity=.08+.18*progress;
@@ -85,4 +86,4 @@ const originalRender=World.prototype.render;
 World.prototype.render=function(dt,state){updateTransients(this,dt);return originalRender.call(this,dt,state);};
 
 const originalReset=World.prototype.resetLevel;
-World.prototype.resetLevel=function(...args){if(this._cinematicFx){for(const fx of this._cinematicFx)this.root.remove(fx.mesh);this._cinematicFx.length=0;}return originalReset.apply(this,args);};
+World.prototype.resetLevel=function(...args){if(this._cinematicFx){for(const fx of this._cinematicFx)disposeFx(fx.mesh);this._cinematicFx.length=0;}return originalReset.apply(this,args);};

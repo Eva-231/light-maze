@@ -1,3 +1,4 @@
+import {excavationCount} from './abyss-rules.js';
 import {W,S,START,rooms,cells,grid,distances,stageInfo,rng,walkable,indexAt,lineOfSight} from './core.js';
 export const OMENS=[
  {name:'静かな迷宮',text:'静けさの先に、鉱脈が眠る。',light:1,mana:1,enemies:0,value:1},
@@ -10,18 +11,22 @@ export const TRAP_TYPES=[
  {key:'spike',name:'刺突罠',hint:'赤い針が飛び出す。離れるか光弾で破壊。'},
  {key:'mire',name:'鈍足の沼',hint:'移動速度が5秒間低下する。'},
  {key:'ambush',name:'召喚罠',hint:'影兵を2〜3体呼び寄せる。'},
+ {key:'mana',name:'魔封じ',hint:'MPを18奪う。'},
+ {key:'blind',name:'暗幕',hint:'6秒間視界が狭くなる。'},
+ {key:'warp',name:'転移罠',hint:'別の部屋へ転移する。定着で無効。'},
+ {key:'poison',name:'毒針',hint:'8秒間、毎秒3ダメージ。'},
  {key:'eclipse',name:'星蝕罠',hint:'LIGHTとMPを奪う。HPだけ見ていると危険。'}
 ];
 export function expeditionPlan(){
  const r=rng(stageInfo.seed^0xB371),omen=stageInfo.config.omens?OMENS[Math.floor(r()*OMENS.length)]:OMENS[0],maxDepth=Math.max(...distances);
  const occupied=new Set(stageInfo.relics.map(a=>indexAt(a.x,a.z))),eligible=cells.filter(i=>distances[i]>10&&grid[i]>0&&!occupied.has(i)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([x,z])=>!walkable(i%W+x,Math.floor(i/W)+z))).map(i=>({i,key:r()})).sort((a,b)=>a.key-b.key);
- const veins=[];for(const {i}of eligible){if(!stageInfo.config.mine)break;if(veins.length>=5+(omen===OMENS[4]?1:0))break;if(veins.some(v=>Math.hypot(v.x-i%W*S,v.z-Math.floor(i/W)*S)<12))continue;
+ const veinLimit=Math.max(stageInfo.floor===4&&!stageInfo.config.abyss?1:0,excavationCount(r,stageInfo.config.rules?.route)),veins=[];for(const {i}of eligible){if(!stageInfo.config.mine)break;if(veins.length>=veinLimit)break;if(veins.some(v=>Math.hypot(v.x-i%W*S,v.z-Math.floor(i/W)*S)<12))continue;
   const sides=[[1,0],[-1,0],[0,1],[0,-1]].filter(([x,z])=>!walkable(i%W+x,Math.floor(i/W)+z)),[dx,dz]=sides[Math.floor(r()*sides.length)],quality=distances[i]/maxDepth>.65?2:r()<.35?1:0,layers=2+Math.floor(r()*3),rewards=[];
-  for(let n=0;n<layers;n++)rewards.push({value:Math.floor((80+r()*120)*(1+quality*.8)*(n===layers-1?2:1)),cache:n===layers-1||r()<.08,seed:Math.floor(r()*4294967296),quality:n===layers-1?quality:0});
+  for(let n=0;n<layers;n++)rewards.push({value:Math.floor((80+r()*120)*(1+quality*.8)*(n===layers-1?2:1)),cache:n===layers-1,seed:Math.floor(r()*4294967296),quality:n===layers-1?quality:0});
   veins.push({id:veins.length,x:i%W*S+dx*1.40,z:Math.floor(i/W)*S+dz*1.40,dx,dz,room:grid[i],quality,layers,hits:0,progress:0,rewards});
  }
  const traps=[],choices=cells.filter(i=>distances[i]>15&&!occupied.has(i)&&grid[i]!==0).map(i=>({i,key:r()})).sort((a,b)=>a.key-b.key);
- for(const {i}of choices){if(!stageInfo.config.traps)break;if(traps.length>=3+Math.floor(stageInfo.difficulty*.7))break;const offset=(r()-.5)*1.0,x=i%W*S+(r()<.5?offset:0),z=Math.floor(i/W)*S+(r()<.5?0:offset);if(traps.some(t=>Math.hypot(t.x-x,t.z-z)<12)||veins.some(v=>Math.hypot(v.x-x,v.z-z)<3))continue;const difficulty=stageInfo.config.difficulty,instant=difficulty.key==='abyss'&&r()<.35,available=stageInfo.floor<=5?2:stageInfo.floor===6?3:4,kind=TRAP_TYPES[Math.floor(r()*available)].key;traps.push({id:traps.length,x,z,kind,timer:-1,spent:false,instant,fuse:instant?0:difficulty.trapFuse,damage:difficulty.trapDamage,triggerRadius:.62,burstRadius:1.3});}
+ for(const {i}of choices){if(!stageInfo.config.traps)break;if(traps.length>=Math.round((3+Math.floor(stageInfo.difficulty*.7))*(stageInfo.config.rules?.traps||1)))break;const offset=(r()-.5)*1.0,x=i%W*S+(r()<.5?offset:0),z=Math.floor(i/W)*S+(r()<.5?0:offset);if(traps.some(t=>Math.hypot(t.x-x,t.z-z)<12)||veins.some(v=>Math.hypot(v.x-x,v.z-z)<3))continue;const difficulty=stageInfo.config.difficulty,instant=difficulty.key==='abyss'&&r()<.35,available=stageInfo.floor<=5?2:stageInfo.floor===6?3:TRAP_TYPES.length,kind=TRAP_TYPES[Math.floor(r()*available)].key;traps.push({id:traps.length,x,z,kind,timer:-1,spent:false,instant,fuse:instant?0:difficulty.trapFuse,damage:difficulty.trapDamage,triggerRadius:.42,burstRadius:.85});}
  const supplies=(stageInfo.floor>=2?rooms.slice(1):[]).filter(a=>!occupied.has(a.z*W+a.x)).map(a=>({a,key:r()})).sort((a,b)=>a.key-b.key).slice(0,4).map(({a},i)=>({x:a.x*S+.55,z:a.z*S+.55,kind:i%2?'mana':'heal',collected:false}));
  return{omen,veins,traps,supplies};
 }

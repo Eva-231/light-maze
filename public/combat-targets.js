@@ -1,0 +1,3 @@
+import {canStand,lineOfSight} from './core.js';
+// One bounded ray reflection; no per-frame projectiles or unbounded recursion.
+export function reflectedTargets(player,enemies){let x=player.x,z=player.z,dx=-Math.sin(player.yaw),dz=-Math.cos(player.yaw),bounce=null;for(let i=0;i<60;i++){const nx=x+dx*.2,nz=z+dz*.2;if(!canStand(nx,nz)){if(!canStand(nx,z))dx=-dx;else dz=-dz;bounce={x,z};break;}x=nx;z=nz;}if(!bounce)return[];return enemies.filter(e=>!e.dead&&!e.escaped&&Math.hypot(e.x-x,e.z-z)<10&&lineOfSight(x,z,e.x,e.z)&&((e.x-x)*dx+(e.z-z)*dz)/Math.max(.01,Math.hypot(e.x-x,e.z-z))>Math.cos(.2)).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z)).slice(0,5).map(enemy=>({enemy,bounce}));}
