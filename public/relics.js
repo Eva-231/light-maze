@@ -40,12 +40,12 @@ export function rollRelic(seed,quality=0,pity=0,options={}){
  const r=random(seed),odds=rarityOdds(quality,pity);let roll=r(),tier=3;for(let i=0;i<4;i++){roll-=odds[i];if(roll<0){tier=i;break;}}
  const depth=options.abyssFloor?depthLoot(options.abyssFloor,options.source):null;
  if(depth){const chance=r(),boost=Math.min(.65,options.qualityBoost||0),mythic=depth.mythic*(options.source==='elite'?4:1),abyss=depth.abyss*(1+boost),legend=depth.legend*(1+boost);tier=chance<mythic?5:chance<mythic+abyss?4:chance<mythic+abyss+legend?3:2;}
- if(options.source==='mine'&&(options.abyssFloor||0)>=10)tier=Math.max(tier,4);
+ const deepSource=['mine','enemy','elite'].includes(options.source)&&(options.abyssFloor||0)>=10;if(deepSource)tier=Math.max(tier,4);
  tier=Math.max(tier,options.minTier||0,depth?.minTier||0);if(options.mythic)tier=5;
  const unlocked=options.unlocked||18,allowed=RELICS.map((_,i)=>i).filter(i=>tier>=4?RELICS[i].abyss&&!!RELICS[i].mythic===(tier===5)&&(RELICS[i].minFloor||10)<=(options.mythic?Math.max(80,options.abyssFloor||99):options.abyssFloor||99):!RELICS[i].exclusive&&TYPE_UNLOCKS[i]<=unlocked);
  const type=options.forcedType??allowed[Math.floor(r()*allowed.length)]??0,def=RELICS[type];if(def.exclusive)tier=def.mythic?5:def.abyss?4:3;
- const mineGrade=()=>{const f=options.abyssFloor||10,base=f>=90?4:f>=50?3:2,bonus=f>=90?.15:f>=70?.20:f>=50?.15:.15;return Math.min(5,base+(r()<bonus?1:0));};
- const abyssGrade=tier===4?(options.source==='mine'?mineGrade():rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source))):0,maxRoll=tier===4?50+abyssGrade*10:100;
+ const deepGrade=()=>{const f=options.abyssFloor||10,base=f>=90?5:f>=70?4:f>=50?3:2,bonus=f>=90?0:f>=70?.15:f>=50?.15:f>=30?.20:.10;return Math.min(5,base+(r()<bonus?1:0));};
+ const abyssGrade=tier===4?(deepSource?deepGrade():rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source))):0,maxRoll=tier===4?50+abyssGrade*10:100;
  const a=Math.floor(r()*AFFIXES.length),b=(a+1+Math.floor(r()*(AFFIXES.length-1)))%AFFIXES.length,minRoll=Math.max(1,Math.min(maxRoll,options.minRoll||depth?.minRoll||1));
  const extraPool=POWERS.filter(p=>p.minFloor<=(options.abyssFloor||10)&&!def.powers?.includes(p.key)),extraPowers=def.abyss&&!def.curse&&extraPool.length?[extraPool[Math.floor(r()*extraPool.length)].key]:[];
  return{id:(seed>>>0).toString(36)+'-'+Math.floor(r()*1e8).toString(36),type,tier,a,b,rollA:minRoll+Math.floor(r()*(maxRoll+1-minRoll)),rollB:minRoll+Math.floor(r()*(maxRoll+1-minRoll)),depth:Math.max(0,Math.min(20,Math.floor(options.depth||depth?.powerDepth||0))),favorite:false,...(tier===4?{abyssGrade}:{}),...(def.abyss?{extraPowers,upgrade:0,evolutionKills:0,evolved:false}: {})};
@@ -90,7 +90,7 @@ export function relicDescription(item){
 }
 export function appraisal(progress,seed,{cache=false}={}){
  if(progress.floor<4)return{error:'遺物の鑑定は3面クリアで解放されます。'};
- if(progress.inventory.length>=INVENTORY_LIMIT)return{error:'装備庫が満杯です。不要な装備を売却してください。'};
+ if(!cache&&progress.inventory.length>=INVENTORY_LIMIT)return{error:'装備庫が満杯です。不要な装備を売却してください。'};
  if(cache&&!progress.caches.length)return{error:'未鑑定の遺物がありません。'};
  const spent=(progress.level*(1000+(1000+(progress.level-1)*750)))/2;
  if(!cache&&progress.totalBank-spent-progress.forgeSpent<DRAW_COST)return{error:'銀行の残高が足りません。'};
@@ -125,7 +125,7 @@ export function claimMilestoneGifts(progress){
 }
 
 export const catalogKey=item=>item.type<21?item.type*4+item.tier:1000+item.type;
-export function appraiseAll(progress){const n=Math.min(progress.caches.length,INVENTORY_LIMIT-progress.inventory.length);if(!n)return{error:'未鑑定の遺物か装備庫の空きを確認してください。'};const draft=structuredClone(progress),results=[];for(let i=0;i<n;i++){const result=appraisal(draft,0,{cache:true});if(result.error)return result;results.push(result);}Object.assign(progress,draft);return{results,highest:Math.max(...results.map(r=>r.item.tier)),cost:0};}
+export function appraiseAll(progress){const n=progress.caches.length;if(!n)return{error:'未鑑定の遺物がありません。'};const draft=structuredClone(progress),results=[];for(let i=0;i<n;i++){const result=appraisal(draft,0,{cache:true});if(result.error)return result;results.push(result);}Object.assign(progress,draft);return{results,highest:Math.max(...results.map(r=>r.item.tier)),cost:0};}
 export function workshop(progress,id,action,seed=1,lock=false){const item=progress.inventory.find(i=>i.id===id);if(!item||item.tier<3)return{error:'伝説以上の装備を選んでください。'};progress.shards??=0;
  if(action==='salvage'){if(item.favorite||progress.equipped.includes(id))return{error:'お気に入り・装備中は分解できません。'};const value=[0,0,0,5,12,30][item.tier];progress.inventory=progress.inventory.filter(i=>i.id!==id);progress.shards+=value;return{message:'星屑 +'+value};}
  const cost=action==='upgrade'?5+5*(item.upgrade||0):lock?20:10;if(progress.shards<cost)return{error:'星屑 '+cost+' が必要です。'};

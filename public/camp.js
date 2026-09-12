@@ -5,7 +5,7 @@ import {synergyStatus,discoverLoadout} from './codex.js';
 import {DIFFICULTIES} from './journey.js';
 import {RevealSequence} from './reveal-sequence.js';
 import {AvatarPreview} from './avatar.js';
-import {RELICS,RARITIES,SLOTS,AFFIXES,DRAW_COST,INVENTORY_LIMIT,affixValue,relicQuality,relicPower,salvageValue,loadoutStats,appraisal,appraisalBatch,appraiseAll,workshop,catalogKey,dailyChallenge,relicDescription,CATALOG_SIZE,toggleFavorite,sellRelic} from './relics.js';
+import {RELICS,RARITIES,SLOTS,AFFIXES,DRAW_COST,INVENTORY_LIMIT,CACHE_LIMIT,affixValue,relicQuality,relicPower,salvageValue,loadoutStats,appraisal,appraisalBatch,appraiseAll,workshop,catalogKey,dailyChallenge,relicDescription,CATALOG_SIZE,toggleFavorite,sellRelic} from './relics.js';
 import {balance} from './save.js';
 const money=n=>'¥'+Math.floor(n).toLocaleString('ja-JP');
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,12 +15,12 @@ const card=i=>`<div class="relic-card" style="--relic:${RARITIES[i.tier].color}"
 export function createCamp({getProgress,changed,sound,openDialog,rankings,canChange=()=>true,onLesson=()=>{}}){
  const $=id=>document.getElementById(id);let tab='forge',slot=0,page=0,favoritesOnly=false,busy=false,last=null,sequence=null,results=[],saveMessage='';let appraisalPreview=null;const avatar=new AvatarPreview($('avatar-canvas')),pageSize=24;
  createCraftingUI({getProgress,changed:()=>{discoverLoadout(getProgress());changed();render();},openDialog,canChange:()=>!busy&&canChange()});
- function summary(){const p=getProgress();$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備';}
+ function summary(){const p=getProgress(),over=Math.max(0,p.inventory.length-INVENTORY_LIMIT),cacheOver=Math.max(0,p.caches.length-CACHE_LIMIT);$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備'+(over?' · '+over+'超過':'')+(cacheOver?' · 未鑑定'+cacheOver+'超過':'');}
  function render(){summary();if(tab!=='forge'){appraisalPreview?.close();appraisalPreview=null;}const unlocked=getProgress().floor>=4;document.querySelectorAll('[data-camp-tab]').forEach(b=>{if(b.dataset.campTab==='forge')b.hidden=!unlocked;});for(const b of document.querySelectorAll('[data-camp-tab]'))b.setAttribute('aria-selected',String(b.dataset.campTab===tab));
   const p=getProgress();$('crafting-open').hidden=!p.chapterStars?.['18'];avatar.set(p,tab==='loadout');$('camp-forge').hidden=tab!=='forge';$('camp-loadout').hidden=tab!=='loadout';$('camp-records').hidden=tab!=='records';$('camp-ranking').hidden=tab!=='ranking';
   if(tab==='forge'){
-   $('appraise-all').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;
-   $('appraise-cache').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;$('appraise-cache').textContent='持ち帰った遺物を鑑定 · '+p.caches.length+'個';
+   $('appraise-all').disabled=busy||!canChange()||!p.caches.length;
+   $('appraise-cache').disabled=busy||!canChange()||!p.caches.length;$('appraise-cache').textContent='持ち帰った遺物を鑑定 · '+p.caches.length+'個';
    $('buy-relic').disabled=busy||!canChange()||balance(p)<DRAW_COST||p.inventory.length>=INVENTORY_LIMIT;$('buy-relic').textContent=money(DRAW_COST)+' で遺物くじを引く';
    $('buy-ten').disabled=busy||!canChange()||balance(p)<DRAW_COST*10||p.inventory.length+10>INVENTORY_LIMIT;$('buy-ten').textContent='10連 · '+money(DRAW_COST*10);
    $('pity-info').textContent='特級以上が出るまで、あと最大 '+(10-p.pity)+'回';
@@ -32,7 +32,7 @@ export function createCamp({getProgress,changed,sound,openDialog,rankings,canCha
    $('equipped-slots').innerHTML=SLOTS.map((s,index)=>{const i=p.inventory.find(v=>v.id===p.equipped[index]);return`<button data-slot="${index}" class="slot-button ${slot===index?'selected':''}"><span>${s}</span><strong>${i?(i.evolved?'深淵王喰らい':RELICS[i.type].name):'未装備'}</strong></button>`;}).join('');
    const all=p.inventory.filter(i=>RELICS[i.type].slot===slot).sort((a,b)=>Number(!!b.favorite)-Number(!!a.favorite)||relicPower(b)-relicPower(a)),items=favoritesOnly?all.filter(i=>i.favorite):all,current=p.inventory.find(i=>i.id===p.equipped[slot]),pages=Math.max(1,Math.ceil(items.length/pageSize));page=Math.min(page,pages-1);const visible=items.slice(page*pageSize,(page+1)*pageSize);
    $('favorite-filter').textContent=favoritesOnly?'★ お気に入りのみ':'☆ お気に入りで絞る';$('favorite-filter').setAttribute('aria-pressed',String(favoritesOnly));$('inventory-page').innerHTML=`<button data-page="prev" ${page===0?'disabled':''}>‹</button><span>${page+1} / ${pages} · ${items.length}点</span><button data-page="next" ${page>=pages-1?'disabled':''}>›</button>`;
-   $('inventory-message').textContent=favoritesOnly&&!items.length?'この枠にお気に入りはありません。':'★を付けた装備は、売却ボタンがロックされます。';
+   $('inventory-message').textContent=p.inventory.length>INVENTORY_LIMIT?'装備ボックスが上限超過中です。獲得品は保持されています。300個以下まで売却・分解すると次のダンジョンに入れます。':favoritesOnly&&!items.length?'この枠にお気に入りはありません。':'★を付けた装備は、売却ボタンがロックされます。';
    $('inventory-list').innerHTML=visible.length?visible.map(i=>`<article class="inventory-item ${i.favorite?'favorite':''}"><button class="favorite-button" data-favorite="${safe(i.id)}" aria-label="${i.favorite?'お気に入りから外す':'お気に入りにして売却を防ぐ'}" aria-pressed="${!!i.favorite}">${i.favorite?'★':'☆'}</button>${card(i)}<div class="item-actions"><button data-equip="${safe(i.id)}" ${current===i?'disabled':''}>${current===i?'装備中':current?'装備する · 評価 '+(relicPower(i)-relicPower(current)>=0?'+':'')+(relicPower(i)-relicPower(current)):'装備する'}</button><button data-sell="${safe(i.id)}" ${current===i||i.favorite?'disabled':''}>${i.favorite?'★ 保護中':'売却 '+money(salvageValue(i))}</button></div>${i.tier>=3?`<div class="workshop-actions"><button data-work="salvage" data-item="${safe(i.id)}" ${i.favorite||current===i?'disabled':''}>分解 → 星屑</button><button data-work="upgrade" data-item="${safe(i.id)}">性能強化</button><button data-work="reroll" data-item="${safe(i.id)}">付加効果再抽選</button><button data-work="reroll" data-lock="1" data-item="${safe(i.id)}">第1性能・能力固定で再抽選</button></div>`:''}</article>`).join(''):'<p class="empty-note">この条件の装備はまだありません。</p>';
    $('catalog-count').textContent='発見図鑑 '+p.catalog.length+' / '+CATALOG_SIZE;$('catalog-list').innerHTML=RELICS.map((r,i)=>`<div><span>${p.codex?.equipment?.includes(i)?r.name:'???'}</span><span>${RARITIES.filter((_,n)=>r.mythic?n===5:r.abyss?n===4:!r.exclusive?n<4:n===3).map(t=>{const n=RARITIES.indexOf(t);return `<b style="color:${p.catalog.includes(i<21?i*4+n:1000+i)?t.color:'#405353'}" title="${t.ja}">${p.catalog.includes(i<21?i*4+n:1000+i)?'◆':'◇'}</b>`;}).join(' ')}</span></div>`).join('');
   }
