@@ -2,7 +2,7 @@ name: Deploy LIGHT MAZE to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/abyss-99f-overhaul]
   workflow_dispatch:
 
 permissions:
@@ -25,7 +25,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Prepare static build
+        # Fail before publication if game/save regression tests fail.
+        shell: bash
         run: |
+          npm run verify
           rm -rf _site
           cp -R public _site
           node <<'NODE'

@@ -13,12 +13,17 @@ import {discover,discoverLoadout,codexEntries,synergyStatus} from './public/code
 import {expeditionPlan,TRAP_TYPES,advanceTraps} from './public/expedition.js';
 import {validProgress,competitiveScore} from './src/worker.js';
 import {RevealSequence} from './public/reveal-sequence.js';
+import {abyssMusicKey,ABYSS_MUSIC_KEYS} from './public/abyss-music.js';
+import {musicScene,MUSIC_TRACKS} from './public/audio.js';
 import {rollGrade,gradeScale,materialStrength,enchantOptions,fuseEquipment,exchangeRevival,consumeRevival,canRevive} from './public/equipment-crafting.js';
 let passed=0;const test=(title,fn)=>{fn();console.log('PASS',title);passed++;};
 const unlocked=()=>{const p=newProgress();p.floor=18;p.chapterStars['18']=1;p.abyss.unlocked=true;return p;};
 const prepareRun=p=>Object.assign(newAbyssRun(p,1207),{hp:100,mp:60,light:100,seals:3,cleared:true,kills:0});
 const findType=key=>RELICS.findIndex(r=>r.key===key&&r.abyss);
 const gear=(key,seed=1)=>rollRelic(seed,2,0,{forcedType:findType(key),abyssFloor:99});
+test('Abyss music varies by floor and expedition, never repeats adjacent floors, and survives resume',()=>{
+ const used=new Set();for(let seed=1;seed<=30;seed++){let previous='';for(let f=1;f<=99;f++){const key=abyssMusicKey(seed,f);assert.notEqual(key,previous);assert.equal(musicScene({mode:'play',abyssFloor:f,abyssSeed:seed,boss:true}),key);assert.equal(abyssMusicKey(seed,f),key);assert(MUSIC_TRACKS[key]);used.add(key);previous=key;}}assert.equal(used.size,6);assert.equal(ABYSS_MUSIC_KEYS.length,6);assert.equal(musicScene({mode:'menu'}),'home');assert.equal(musicScene({mode:'play',floor:1}),'stage1');
+});
 test('New powers append without reindexing v10 Mythics, and change actual combat state',()=>{
  assert.equal(findType('reincarnation'),92);assert.equal(findType('eater'),94);assert.equal(findType('twinstar'),96);assert.equal(RELICS.length,104);
  const s=effectStats({...loadoutStats(newProgress()),powers:['greedlamp','substitute','backlight'],curses:['madking']}),p={hp:100,mp:60,light:100,elapsed:40,effectState:{}};assert.equal(s.lightDrain,1.2);assert.equal(s.lootQuality,.25);assert.equal(damageEffects(s,p,1000,()=>1).damage,99);assert(damageEffects(s,p,1000,()=>1).damage>100);

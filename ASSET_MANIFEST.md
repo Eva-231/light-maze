@@ -9,6 +9,7 @@ The independent project contains every asset referenced by the current game. No 
 | UI, icons, particles | `index.html`, `style.css`, `icon.svg` | Browser entry point |
 | Music | `public/audio/home.mp3`, `stage-1.mp3` … `stage-8.mp3`, `boss.mp3`, `escape.mp3`, `forge.mp3`, `dungeon.mp3` | `audio.js` |
 | Sound effects | Synthesized Web Audio voices | `audio.js` |
+| Abyss v12 music | `public/audio/abyss-ritual.mp3`, `abyss-chip.mp3`, `abyss-piano.mp3`, `abyss-breaks.mp3`, `abyss-jazz.mp3`, `abyss-cosmic.mp3` | `audio.js`, `abyss-music.js`; originals rendered by `compose-abyss-music.py` |
 | Maze/stages | Deterministic procedural data | `generation.js`, `journey.js`, `expedition.js` |
 | Enemies/combat | Runtime parameters and AI | `enemies.js`, `game.js` |
 | Items/equipment/gacha | Runtime parameters and saved item schema | `relics.js`, `camp.js`, `save.js` |
