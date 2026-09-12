@@ -5,10 +5,10 @@ export function levelEnemy(e,config,random=Math.random){
  if(level>=5&&random()<Math.min(.42,.07+(level-5)*.035)*(config.rules?.elite||1)){e.elite=true;const pool=MUTATIONS.filter(m=>m.min<=level);for(let n=0;n<(level>=8?2:1);n++)e.mutations.push(pool.splice(Math.floor(random()*pool.length),1)[0].id);}
  const has=k=>e.mutations.includes(k);e.maxHp=Math.round(e.maxHp*s.hp*(e.elite?1.4:1)*(has('giant')?1.45:1));e.hp=e.maxHp;
  e.levelSpeed=s.speed*(has('swift')?1.25:1)*(has('giant')?.85:1);e.levelDamage=s.damage*(has('fury')?1.35:1)*(config.rules?.damage||1);e.levelTempo=s.tempo*(has('fury')?.9:1);if(has('giant'))e.scale={...s,range:s.range*1.2};e.ward=has('ward')?2:0;
- e.bossPattern=e.kind===5&&config.abyss?Math.min(9,Math.floor(config.abyssFloor/10)-1+(config.abyssFloor===99?1:0)):null;e.title=e.bossPattern!==null?bossTitle(config.abyssFloor):'';
+ e.bossPattern=e.kind===5&&config.abyss?Math.min(9,Math.floor(config.abyssFloor/10)-1+(config.abyssFloor===98?1:0)):null;e.title=e.bossPattern!==null?bossTitle(config.abyssFloor):'';
  e.label='Lv.'+level+' '+e.mutations.map(k=>MUTATIONS.find(m=>m.id===k)?.name).join(' ')+' '+(e.elite?'◆':'');return e;
 }
-export function spawnDue(clock,dt,rules,enemies){clock.seconds=(clock.seconds||0)+dt;if(clock.seconds<rules.spawnInterval)return 0;clock.seconds%=rules.spawnInterval;return Math.max(0,Math.min(rules.spawnCount,ENEMY_CAP-aliveCount(enemies)));}
+export function spawnDue(clock,dt,rules,enemies){if(rules.bonus){clock.seconds=0;return 0;}clock.seconds=(clock.seconds||0)+dt;if(clock.seconds<rules.spawnInterval)return 0;clock.seconds%=rules.spawnInterval;return Math.max(0,Math.min(rules.spawnCount,ENEMY_CAP-aliveCount(enemies)));}
 export function bossZones(e,player){
  const r=(e.enraged?1.85:1.55)*(e.scale?.range||1),aim={x:player.x,z:player.z,radius:r};
  if(e.bossPattern===null||e.bossPattern===undefined)return[aim];

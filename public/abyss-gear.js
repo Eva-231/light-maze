@@ -26,9 +26,9 @@ export const CURSED_GEAR=[
  {key:'deathcontract',name:'死神との契約',slot:1,effect:'通常敵に10%で即死・残HP15%以下で処刑 / 最大HP−40%',powers:['execute'],curse:'deathcontract',minFloor:40}
 ];
 export const MYTHICS=[
- {key:'reincarnation',name:'輪廻',slot:1,effect:'死亡時、探索中1回HP・MP・LIGHT全快で復活',powers:['unyielding','secondform'],mythic:true,minFloor:50},
- {key:'amaterasu',name:'天照',slot:0,effect:'LIGHTが高いほど光爆範囲拡大（3〜7m）',powers:['blast','pristine'],mythic:true,minFloor:50},
- {key:'eater',name:'深淵喰らい',slot:0,effect:'撃破した敵Lvに応じ探索中成長。Lv7以上を100体撃破で進化',powers:['hunting','devourlight'],mythic:true,minFloor:75},
+ {key:'reincarnation',name:'輪廻',slot:1,effect:'死亡時、探索中1回HP・MP・LIGHT全快で復活',powers:['unyielding','secondform'],mythic:true,minFloor:80},
+ {key:'amaterasu',name:'天照',slot:0,effect:'LIGHTが高いほど光爆範囲拡大（3〜7m）',powers:['blast','pristine'],mythic:true,minFloor:80},
+ {key:'eater',name:'深淵喰らい',slot:0,effect:'撃破した敵Lvに応じ探索中成長。Lv7以上を100体撃破で進化',powers:['hunting','devourlight'],mythic:true,minFloor:80},
  {key:'kaleidoscope',name:'万華鏡',slot:0,effect:'光弾が貫通・反射・分裂',powers:['pierce','ricochet','split'],mythic:true,minFloor:99}
 ];
 export const ABYSS_GEAR=[...POWERS.map(p=>({...p,name:p.name+'の'+['杖','護符','灯芯'][p.slot],powers:[p.key],exclusive:true})),...CURSED_GEAR,...MYTHICS].map(p=>({...p,exclusive:true,abyss:true}));
