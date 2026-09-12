@@ -1,0 +1,61 @@
+name: Deploy LIGHT MAZE to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare static build
+        run: |
+          rm -rf _site
+          cp -R public _site
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const root = '_site';
+          const exts = new Set(['.html','.js','.css']);
+          function walk(dir){
+            for(const ent of fs.readdirSync(dir,{withFileTypes:true})){
+              const p=path.join(dir,ent.name);
+              if(ent.isDirectory()) walk(p);
+              else if(exts.has(path.extname(ent.name))){
+                let s=fs.readFileSync(p,'utf8');
+                s=s.replace(/(["'`(])\/(?!api\/|\/)/g,'$1./');
+                fs.writeFileSync(p,s);
+              }
+            }
+          }
+          walk(root);
+          NODE
+          touch _site/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
