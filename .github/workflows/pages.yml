@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,35 +24,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply base HP regeneration patch once
-        if: github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          p=Path('public/game.js')
-          s=p.read_text()
-          marker="state.elapsed+=dt;const dist=homeDistance(state.x,state.z);"
-          replacement="state.elapsed+=dt;if(state.hp<stats.maxHp&&state.elapsed-(state.lastDamageAt??-1e9)>=5)state.hp=Math.min(stats.maxHp,state.hp+stats.maxHp*.005*dt);const dist=homeDistance(state.x,state.z);"
-          if replacement not in s:
-              if marker not in s: raise SystemExit('regen insertion marker not found')
-              s=s.replace(marker,replacement,1)
-          damage="state.hp=hit.hp;state.damageTaken+=damage;"
-          damage_replacement="state.hp=hit.hp;state.lastDamageAt=state.elapsed;state.damageTaken+=damage;"
-          if damage_replacement not in s:
-              if damage not in s: raise SystemExit('damage timestamp marker not found')
-              s=s.replace(damage,damage_replacement,1)
-          p.write_text(s)
-          PY
-          if ! git diff --quiet public/game.js; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/game.js
-            git commit -m "balance: add baseline HP regeneration"
-            git push origin HEAD:main
-          fi
-
       - name: Prepare static build
+        # Fail before publication if game/save regression tests fail.
         shell: bash
         run: |
           npm run verify
@@ -60,10 +33,18 @@ jobs:
           cp -R public _site
           node <<'NODE'
           const fs = require('fs');
+
+          // GitHub project pages live under /light-maze/, so only rewrite
+          // browser resource URLs that are actually site-root absolute.
           const indexPath = '_site/index.html';
           let html = fs.readFileSync(indexPath, 'utf8');
-          html = html.replace(/href="\//g, 'href="./').replace(/src="\//g, 'src="./');
+          html = html
+            .replace(/href="\//g, 'href="./')
+            .replace(/src="\//g, 'src="./');
           fs.writeFileSync(indexPath, html);
+
+          // Audio() resolves these URLs against the page URL. Keep all JS
+          // source code otherwise untouched so regex literals remain valid.
           const audioPath = '_site/audio.js';
           let audio = fs.readFileSync(audioPath, 'utf8');
           audio = audio.replace(/src:'\/audio\//g, "src:'./audio/");
