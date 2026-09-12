@@ -14,9 +14,9 @@ export function validProgress(d){
  if(d.format>=2){if(d.mask!==''||d.completed.length)return false;for(const k of ['floor','clears','bestCoverage','bestClearTime'])if(!finite(d[k]))return false;if(!integer(d.floor,1,1000000)||d.bestCoverage>100)return false;}
  if(d.format>=3){
   for(const k of ['forgeSpent','pity','draws','totalKills','bestScore'])if(!integer(d[k]))return false;if(d.pity>9)return false;
-  if(!list(d.inventory,d.format>=6?300:60)||!d.inventory.every(d.format>=8?validRelicV10:validRelic)||new Set(d.inventory.map(i=>i.id)).size!==d.inventory.length)return false;
+  if(!list(d.inventory,d.format>=8?400:d.format>=6?300:60)||!d.inventory.every(d.format>=8?validRelicV10:validRelic)||new Set(d.inventory.map(i=>i.id)).size!==d.inventory.length)return false;
   if(!list(d.equipped,3)||d.equipped.length!==3||!d.equipped.every((id,slot)=>id===''||d.inventory.some(i=>i.id===id&&relicSlots[i.type]===slot)))return false;
-  if(!list(d.caches,d.format>=6?300:120)||!d.caches.every(validCache))return false;
+  if(!list(d.caches,d.format>=8?400:d.format>=6?300:120)||!d.caches.every(validCache))return false;
   if(!list(d.catalog,200)||!d.catalog.every(i=>(integer(i,0,83)||integer(i,1021,1000+relicSlots.length-1)))||new Set(d.catalog).size!==d.catalog.length)return false;
   if(!list(d.history,20)||!d.history.every(h=>h&&integer(h.at,0,8640000000000000)&&integer(h.seed,0,4294967295)&&integer(h.floor,1,1000000)&&integer(h.score)&&integer(h.kills,0,h.mode==='abyss'?20000:300)&&finite(h.time,0,100000)&&finite(h.loot)&&finite(h.hp,0,1000)&&finite(h.light,0,300)&&finite(h.coverage,0,100)&&integer(h.relics,0,400)&&typeof h.success==='boolean'&&typeof h.cleared==='boolean'&&['normal','daily','abyss'].includes(h.mode)))return false;
   if(!list(d.dailyBests,14)||!d.dailyBests.every(b=>b&&/^\d{4}-\d{2}-\d{2}$/.test(b.day)&&integer(b.score)&&finite(b.time,0,100000)))return false;

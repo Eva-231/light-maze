@@ -35,8 +35,8 @@ test('Relic rates match the visible odds and the tenth-draw guarantee excludes l
  const p=newProgress();p.floor=4;p.totalBank=20000;for(let i=0;i<10;i++){const before=balance(p),previousPity=p.pity,r=appraisal(p,i);assert(r.item);assert.equal(balance(p),before-DRAW_COST);assert.equal(p.pity,r.item.tier>=2?0:previousPity+1);assert(validProgress(p));}
  const before=balance(p);p.caches.push({seed:9828,quality:2});const r=appraisal(p,47,{cache:true});assert.deepEqual(r.item,rollRelic(9828,2,0,{unlocked:4}));assert.equal(balance(p),before);assert.equal(p.caches.length,0);assert(validProgress(p));
 });
-test('Inventory capacity and lack of funds do not consume a cache or mutate balances',()=>{
- const p=newProgress();const original=structuredClone(p);assert(appraisal(p,1).error);assert.deepEqual(p,original);p.floor=4;p.totalBank=1000000;p.inventory=Array.from({length:INVENTORY_LIMIT},(_,i)=>rollRelic(i));p.caches=[{seed:4,quality:2}];const before=structuredClone(p);assert(appraisal(p,8,{cache:true}).error);assert(appraisal(p,9).error);assert.deepEqual(p,before);
+test('Recovered caches may overflow storage temporarily while paid draws still require room',()=>{
+ const p=newProgress();const original=structuredClone(p);assert(appraisal(p,1).error);assert.deepEqual(p,original);p.floor=4;p.totalBank=1000000;p.inventory=Array.from({length:INVENTORY_LIMIT},(_,i)=>rollRelic(i));p.caches=[{seed:4,quality:2}];const result=appraisal(p,8,{cache:true});assert(result.item);assert.equal(p.inventory.length,INVENTORY_LIMIT+1);assert.equal(p.caches.length,0);assert(appraisal(p,9).error);assert(validProgress(p));
 });
 test('A one-tap favorite is persisted and blocks selling until explicitly removed',()=>{
  const p=newProgress(),item=rollRelic(918);p.inventory.push(item);const bank=p.totalBank;assert(toggleFavorite(item));assert.equal(sellRelic(p,item.id).error,'お気に入りの装備は売却できません。★を外してください。');assert.equal(p.inventory.length,1);assert.equal(p.totalBank,bank);assert(!toggleFavorite(item));const sold=sellRelic(p,item.id);assert.equal(sold.value,salvageValue(item));assert.equal(p.inventory.length,0);assert.equal(p.totalBank,bank+sold.value);
