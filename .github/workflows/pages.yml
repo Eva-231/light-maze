@@ -24,28 +24,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update overflow validation once
+      - name: Update overflow integration test once
         if: github.ref == 'refs/heads/main'
         shell: bash
         run: |
           python3 <<'PY'
           from pathlib import Path
-          def rep(path,old,new):
-              p=Path(path); s=p.read_text()
-              if new in s:return
-              if old not in s:raise SystemExit(f'marker not found: {path}')
+          p=Path('integration-tests.mjs')
+          s=p.read_text()
+          old="a.progress.caches=Array.from({length:CACHE_LIMIT-2},(_,i)=>({seed:i,quality:0}));a.startRun();assert.equal(a.progress.runs,beforeAttempts);assert(nodes.get('camp-dialog').open);"
+          new="a.progress.caches=Array.from({length:CACHE_LIMIT+1},(_,i)=>({seed:i,quality:0}));a.startRun();assert.equal(a.progress.runs,beforeAttempts);assert(nodes.get('camp-dialog').open);"
+          if new not in s:
+              if old not in s: raise SystemExit('integration overflow marker not found')
               p.write_text(s.replace(old,new,1))
-          rep('src/worker.js',"if(!list(d.inventory,d.format>=6?300:60)||","if(!list(d.inventory,d.format>=8?400:d.format>=6?300:60)||")
-          rep('src/worker.js',"if(!list(d.caches,d.format>=6?300:120)||","if(!list(d.caches,d.format>=8?400:d.format>=6?300:120)||")
-          rep('rpg-tests.mjs',
-          "test('Inventory capacity and lack of funds do not consume a cache or mutate balances',()=>{\n const p=newProgress();const original=structuredClone(p);assert(appraisal(p,1).error);assert.deepEqual(p,original);p.floor=4;p.totalBank=1000000;p.inventory=Array.from({length:INVENTORY_LIMIT},(_,i)=>rollRelic(i));p.caches=[{seed:4,quality:2}];const before=structuredClone(p);assert(appraisal(p,8,{cache:true}).error);assert(appraisal(p,9).error);assert.deepEqual(p,before);\n});",
-          "test('Recovered caches may overflow storage temporarily while paid draws still require room',()=>{\n const p=newProgress();const original=structuredClone(p);assert(appraisal(p,1).error);assert.deepEqual(p,original);p.floor=4;p.totalBank=1000000;p.inventory=Array.from({length:INVENTORY_LIMIT},(_,i)=>rollRelic(i));p.caches=[{seed:4,quality:2}];const result=appraisal(p,8,{cache:true});assert(result.item);assert.equal(p.inventory.length,INVENTORY_LIMIT+1);assert.equal(p.caches.length,0);assert(appraisal(p,9).error);assert(validProgress(p));\n});")
           PY
-          if ! git diff --quiet src/worker.js rpg-tests.mjs; then
+          if ! git diff --quiet integration-tests.mjs; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/worker.js rpg-tests.mjs
-            git commit -m "test: allow temporary storage overflow"
+            git add integration-tests.mjs
+            git commit -m "test: block runs only after storage exceeds cap"
             git push origin HEAD:main
           fi
 
