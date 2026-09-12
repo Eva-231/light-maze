@@ -43,16 +43,14 @@ jobs:
               if damage not in s: raise SystemExit('damage timestamp marker not found')
               s=s.replace(damage,damage_replacement,1)
           p.write_text(s)
-
-          wf=Path('.github/workflows/pages.yml')
-          wf.write_text('''name: Deploy LIGHT MAZE to GitHub Pages\n\non:\n  push:\n    branches: [main, feature/abyss-99f-overhaul]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Prepare static build\n        # Fail before publication if game/save regression tests fail.\n        shell: bash\n        run: |\n          npm run verify\n          rm -rf _site\n          cp -R public _site\n          node <<'NODE'\n          const fs = require('fs');\n\n          // GitHub project pages live under /light-maze/, so only rewrite\n          // browser resource URLs that are actually site-root absolute.\n          const indexPath = '_site/index.html';\n          let html = fs.readFileSync(indexPath, 'utf8');\n          html = html\n            .replace(/href=\"\\//g, 'href=\"./')\n            .replace(/src=\"\\//g, 'src=\"./');\n          fs.writeFileSync(indexPath, html);\n\n          // Audio() resolves these URLs against the page URL. Keep all JS\n          // source code otherwise untouched so regex literals remain valid.\n          const audioPath = '_site/audio.js';\n          let audio = fs.readFileSync(audioPath, 'utf8');\n          audio = audio.replace(/src:'\\/audio\\//g, \"src:'./audio/\");\n          fs.writeFileSync(audioPath, audio);\n          NODE\n          touch _site/.nojekyll\n\n      - name: Configure Pages\n        uses: actions/configure-pages@v5\n\n      - name: Upload artifact\n        uses: actions/upload-pages-artifact@v3\n        with:\n          path: _site\n\n      - name: Deploy\n        id: deployment\n        uses: actions/deploy-pages@v4\n''')
           PY
-          if git diff --quiet; then exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/game.js .github/workflows/pages.yml
-          git commit -m "balance: add baseline HP regeneration"
-          git push origin HEAD:main
+          if ! git diff --quiet public/game.js; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/game.js
+            git commit -m "balance: add baseline HP regeneration"
+            git push origin HEAD:main
+          fi
 
       - name: Prepare static build
         shell: bash
