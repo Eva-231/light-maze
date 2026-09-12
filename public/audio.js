@@ -33,7 +33,7 @@ function installCampNavigationRepair(){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready,{once:true});else ready();
 }
 export class Sound{
- constructor(settings){this.settings=settings;this.context=null;this.duckUntil=0;this.heart=0;this.step=0;this.lastHaptic=0;this.voices=0;this.musicTarget=-1;this.filterTarget=-1;this.currentKey='home';this.pendingKey='home';this.tracks=new Map();this.track=null;this.pauseTimers=new Map();this.unlock=()=>{if(!this.settings.sound)return;this.start();};for(const type of ['pointerdown','touchstart','keydown'])document.addEventListener(type,this.unlock,{capture:true,passive:true});installCampNavigationRepair();}
+ constructor(settings){this.settings=settings;this.context=null;this.duckUntil=0;this.heart=0;this.step=0;this.lastHaptic=0;this.voices=0;this.musicTarget=-1;this.filterTarget=-1;this.currentKey='home';this.pendingKey='home';this.tracks=new Map();this.track=null;this.pauseTimers=new Map();this.unlock=()=>{if(!this.settings.sound)return;this.start();};if(typeof document!=='undefined'){for(const type of ['pointerdown','touchstart','keydown'])document.addEventListener(type,this.unlock,{capture:true,passive:true});installCampNavigationRepair();}}
  ensureTrack(key){
   if(this.tracks.has(key))return this.tracks.get(key);const meta=MUSIC_TRACKS[key]||MUSIC_TRACKS.home,audio=new Audio(meta.src);audio.loop=true;audio.preload='auto';audio.playsInline=true;audio.setAttribute('playsinline','');const gain=this.context.createGain();gain.gain.value=0;const source=this.context.createMediaElementSource(audio);source.connect(gain);gain.connect(this.musicFilter);const channel={audio,gain,source,key};this.tracks.set(key,channel);return channel;
  }
