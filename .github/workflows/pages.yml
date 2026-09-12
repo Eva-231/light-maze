@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,8 +24,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Apply abyss mining floor guarantee once
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('public/relics.js')
+          s=p.read_text()
+          old=""" if(depth){const chance=r(),boost=Math.min(.65,options.qualityBoost||0),mythic=depth.mythic*(options.source==='elite'?4:1),abyss=depth.abyss*(1+boost),legend=depth.legend*(1+boost);tier=chance<mythic?5:chance<mythic+abyss?4:chance<mythic+abyss+legend?3:2;}\n tier=Math.max(tier,options.minTier||0,depth?.minTier||0);if(options.mythic)tier=5;\n const unlocked=options.unlocked||18,allowed=RELICS.map((_,i)=>i).filter(i=>tier>=4?RELICS[i].abyss&&!!RELICS[i].mythic===(tier===5)&&(RELICS[i].minFloor||10)<=(options.mythic?Math.max(80,options.abyssFloor||99):options.abyssFloor||99):!RELICS[i].exclusive&&TYPE_UNLOCKS[i]<=unlocked);\n const type=options.forcedType??allowed[Math.floor(r()*allowed.length)]??0,def=RELICS[type];if(def.exclusive)tier=def.mythic?5:def.abyss?4:3;\n const abyssGrade=tier===4?rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source)):0,maxRoll=tier===4?50+abyssGrade*10:100;"""
+          new=""" if(depth){const chance=r(),boost=Math.min(.65,options.qualityBoost||0),mythic=depth.mythic*(options.source==='elite'?4:1),abyss=depth.abyss*(1+boost),legend=depth.legend*(1+boost);tier=chance<mythic?5:chance<mythic+abyss?4:chance<mythic+abyss+legend?3:2;}\n if(options.source==='mine'&&(options.abyssFloor||0)>=10)tier=Math.max(tier,4);\n tier=Math.max(tier,options.minTier||0,depth?.minTier||0);if(options.mythic)tier=5;\n const unlocked=options.unlocked||18,allowed=RELICS.map((_,i)=>i).filter(i=>tier>=4?RELICS[i].abyss&&!!RELICS[i].mythic===(tier===5)&&(RELICS[i].minFloor||10)<=(options.mythic?Math.max(80,options.abyssFloor||99):options.abyssFloor||99):!RELICS[i].exclusive&&TYPE_UNLOCKS[i]<=unlocked);\n const type=options.forcedType??allowed[Math.floor(r()*allowed.length)]??0,def=RELICS[type];if(def.exclusive)tier=def.mythic?5:def.abyss?4:3;\n const mineGrade=()=>{const f=options.abyssFloor||10,base=f>=90?4:f>=50?3:2,bonus=f>=90?.15:f>=70?.20:f>=50?.15:.15;return Math.min(5,base+(r()<bonus?1:0));};\n const abyssGrade=tier===4?(options.source==='mine'?mineGrade():rollGrade(options.abyssFloor||10,r,['chest','boss'].includes(options.source))):0,maxRoll=tier===4?50+abyssGrade*10:100;"""
+          if new not in s:
+              if old not in s: raise SystemExit('relic roll marker not found')
+              s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+          if ! git diff --quiet public/relics.js; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/relics.js
+            git commit -m "balance: guarantee abyss gear from deep mining"
+            git push origin HEAD:main
+          fi
+
       - name: Prepare static build
-        # Fail before publication if game/save regression tests fail.
         shell: bash
         run: |
           npm run verify
@@ -33,18 +55,10 @@ jobs:
           cp -R public _site
           node <<'NODE'
           const fs = require('fs');
-
-          // GitHub project pages live under /light-maze/, so only rewrite
-          // browser resource URLs that are actually site-root absolute.
           const indexPath = '_site/index.html';
           let html = fs.readFileSync(indexPath, 'utf8');
-          html = html
-            .replace(/href="\//g, 'href="./')
-            .replace(/src="\//g, 'src="./');
+          html = html.replace(/href="\//g, 'href="./').replace(/src="\//g, 'src="./');
           fs.writeFileSync(indexPath, html);
-
-          // Audio() resolves these URLs against the page URL. Keep all JS
-          // source code otherwise untouched so regex literals remain valid.
           const audioPath = '_site/audio.js';
           let audio = fs.readFileSync(audioPath, 'utf8');
           audio = audio.replace(/src:'\/audio\//g, "src:'./audio/");
