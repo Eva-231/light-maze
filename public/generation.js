@@ -35,7 +35,7 @@ export function generateStage(seed=1,floor=1,trialLevel=1,daily=false){
  stageInfo.seed=seed>>>0;stageInfo.floor=floor;stageInfo.difficulty=difficulty;stageInfo.relics=selected.map((r,id)=>({id,room:r.id,x:r.x*S,z:r.z*S,collected:false,guardId:null}));
  stageInfo.jackpotRoom=depths.slice().reverse().find(v=>!selected.some(r=>r.id===v.room.id)).room.id;rooms[stageInfo.jackpotRoom].name='黄金の宝物庫';
  stageInfo.optimalSteps=optimalSealRoute().steps;stageInfo.enemyCount=config.enemies+Math.min(3,Math.floor(Math.max(0,config.trialLevel-1)/3));
- const idealSeconds=stageInfo.optimalSteps*S/SPEED;stageInfo.baseDrain=clamp(64/(idealSeconds*1.45+22),.22,.50)*config.lightScale*(1+Math.max(0,config.trialLevel-1)*.025);stageInfo.parTime=Math.ceil(idealSeconds*1.45+config.enemies*5+config.seals*2+12);return stageInfo;
+ const idealSeconds=stageInfo.optimalSteps*S/SPEED;stageInfo.baseDrain=clamp(64/(idealSeconds*1.45+22),.22,.50)*config.lightScale*(1+Math.min(.45,Math.max(0,config.trialLevel-1)*.025));stageInfo.parTime=Math.ceil(idealSeconds*1.45+config.enemies*5+config.seals*2+12);return stageInfo;
 }
 export function homeDistance(x,z){const i=indexAt(x,z);if(i===homeIndex)return Math.hypot(x-START.x,z-START.z);const n=nextHome[i];return Math.max(0,(distances[i]-1)*S+Math.hypot(x-(n%W)*S,z-Math.floor(n/W)*S));}
 export function canStand(x,z){const r=.26;return [[-r,-r],[r,-r],[-r,r],[r,r]].every(([a,b])=>walkable(Math.round((x+a)/S),Math.round((z+b)/S)));}
