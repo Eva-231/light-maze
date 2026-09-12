@@ -1,3 +1,6 @@
+import {RelicPreview} from './relic-preview.js';
+import {createCraftingUI} from './crafting-ui.js';
+import {gearGrade,GRADES} from './equipment-crafting.js';
 import {synergyStatus,discoverLoadout} from './codex.js';
 import {DIFFICULTIES} from './journey.js';
 import {RevealSequence} from './reveal-sequence.js';
@@ -8,11 +11,12 @@ const money=n=>'¥'+Math.floor(n).toLocaleString('ja-JP');
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const progressLabel=(p,daily,best)=>p.floor<8?'7面クリアで日替わり討伐が解放。共通能力で最速タイムを競います。':daily.day+' · 本日最速 '+(best?.cleared?best.time.toFixed(2)+'秒':'未討伐');
 const stat=(i,second=false)=>{const a=AFFIXES[second?i.b:i.a];return a.name+' +'+affixValue(i,second)+(['crit','economy'].includes(a.key)?'%':'');};
-const card=i=>`<div class="relic-card" style="--relic:${RARITIES[i.tier].color}"><div class="relic-grade">${RARITIES[i.tier].name} · ${SLOTS[RELICS[i.type].slot]}</div><h3><span class="codex-glyph">${i.tier>=5?'✺':i.tier===4?'✧':'◇'}</span>${i.evolved?'深淵王喰らい':RELICS[i.type].name}${i.upgrade?' +'+i.upgrade:''}</h3><div class="relic-quality"><strong>${relicPower(i)}</strong><span>装備評価<br>個体品質 ${relicQuality(i)} / 100</span></div><p>${relicDescription(i)}</p>${RELICS[i.type].exclusive?'<span class="exclusive-tag">深淵突破限定</span>':''}<div class="affixes"><span>${stat(i)}</span><span>${stat(i,true)}</span></div></div>`;
+const card=i=>`<div class="relic-card" style="--relic:${RARITIES[i.tier].color}"><div class="relic-grade">${RARITIES[i.tier].name}${gearGrade(i)?' Grade '+GRADES[gearGrade(i)-1]:''} · ${SLOTS[RELICS[i.type].slot]}</div><h3><span class="codex-glyph">${i.tier>=5?'✺':i.tier===4?'✧':'◇'}</span>${i.evolved?'深淵王喰らい':RELICS[i.type].name}${i.upgrade?' +'+i.upgrade:''}</h3><div class="relic-quality"><strong>${relicPower(i)}</strong><span>装備評価<br>個体品質 ${relicQuality(i)} / 100</span></div><p>${relicDescription(i)}</p>${RELICS[i.type].exclusive?'<span class="exclusive-tag">深淵突破限定</span>':''}<div class="affixes"><span>${stat(i)}</span><span>${stat(i,true)}</span></div></div>`;
 export function createCamp({getProgress,changed,sound,openDialog,rankings,canChange=()=>true,onLesson=()=>{}}){
- const $=id=>document.getElementById(id);let tab='forge',slot=0,page=0,favoritesOnly=false,busy=false,last=null,sequence=null,results=[],saveMessage='';const avatar=new AvatarPreview($('avatar-canvas')),pageSize=24;
+ const $=id=>document.getElementById(id);let tab='forge',slot=0,page=0,favoritesOnly=false,busy=false,last=null,sequence=null,results=[],saveMessage='';let appraisalPreview=null;const avatar=new AvatarPreview($('avatar-canvas')),pageSize=24;
+ createCraftingUI({getProgress,changed:()=>{discoverLoadout(getProgress());changed();render();},openDialog,canChange:()=>!busy&&canChange()});
  function summary(){const p=getProgress();$('camp-bank').textContent=money(balance(p));$('camp-count').textContent=p.inventory.length+' / '+INVENTORY_LIMIT+' 装備';}
- function render(){summary();const unlocked=getProgress().floor>=4;document.querySelectorAll('[data-camp-tab]').forEach(b=>{if(b.dataset.campTab==='forge')b.hidden=!unlocked;});for(const b of document.querySelectorAll('[data-camp-tab]'))b.setAttribute('aria-selected',String(b.dataset.campTab===tab));
+ function render(){summary();if(tab!=='forge'){appraisalPreview?.close();appraisalPreview=null;}const unlocked=getProgress().floor>=4;document.querySelectorAll('[data-camp-tab]').forEach(b=>{if(b.dataset.campTab==='forge')b.hidden=!unlocked;});for(const b of document.querySelectorAll('[data-camp-tab]'))b.setAttribute('aria-selected',String(b.dataset.campTab===tab));
   const p=getProgress();avatar.set(p,tab==='loadout');$('camp-forge').hidden=tab!=='forge';$('camp-loadout').hidden=tab!=='loadout';$('camp-records').hidden=tab!=='records';$('camp-ranking').hidden=tab!=='ranking';
   if(tab==='forge'){
    $('appraise-all').disabled=busy||!canChange()||!p.caches.length||p.inventory.length>=INVENTORY_LIMIT;
@@ -41,7 +45,7 @@ export function createCamp({getProgress,changed,sound,openDialog,rankings,canCha
   }
  }
  function open(next='forge'){tab=next==='forge'&&getProgress().floor<4?'loadout':next;render();openDialog('camp-dialog');if(tab==='ranking')rankings?.show();}
- function detail(){if(!last)return;$('draw-detail').innerHTML=card(last)+'<button class="secondary" id="equip-new">この装備を使う</button>';}
+ function detail(){if(!last)return;appraisalPreview?.close();$('draw-detail').innerHTML='<canvas id="relic-preview" aria-label="鑑定した装備の回転3D表示"></canvas>'+card(last)+'<button class="secondary" id="equip-new">この装備を使う</button>';appraisalPreview=new RelicPreview($('relic-preview'),last);}
  function drawGrid(opened=results.length){return '<div class="draw-grid">'+results.slice(0,40).map((r,i)=>i<opened?`<button class="draw-card grade-${r.item.tier}" data-preview="${safe(r.item.id)}" style="--relic:${RARITIES[r.item.tier].color};--i:0"><span>${RARITIES[r.item.tier].name}${r.isNew?' · NEW':''}</span><b>◇</b><strong>${RELICS[r.item.type].name}</strong><small>装備評価 ${relicPower(r.item)}</small></button>`:`<div class="draw-card sealed-card"><span>${String(i+1).padStart(2,'0')}</span><b>◇</b><small>未開封</small></div>`).join('')+'</div>';}
  function finishReveal(silent=false){if(!busy)return;if(sequence&&!sequence.done){sequence.finish(silent);return;}busy=false;
   $('camp-dialog').classList.remove('drawing');$('appraisal-result').innerHTML=(results.length>1?'<div class="draw-summary">'+results.length+' RELICS REVEALED <span>特級以上 '+results.filter(r=>r.item.tier>=2).length+'個</span></div>'+drawGrid():results[0].isNew?'<p class="new-discovery">NEW DISCOVERY · 図鑑に追加</p>':'')+'<div id="draw-detail"></div>';
@@ -59,14 +63,14 @@ export function createCamp({getProgress,changed,sound,openDialog,rankings,canCha
   if(e.phase==='promise'){stage.style.setProperty('--relic',RARITIES[e.tier].color);stage.classList.add('grade-'+e.tier);$('ritual-promise').textContent=e.tier>=5?'星空が砕ける。神話が目を覚ます。':e.tier===4?'深淵から、光が逆流する。':e.tier===3?'金の扉が開く。':'紫の星が満ちる。';$('rarity-curtain').innerHTML='<span>RARITY CONFIRMED</span><b>'+(e.tier>=5?'神 話':e.tier===4?'深 淵':e.tier===3?'伝 説':'特 級')+'</b><small>'+RARITIES[e.tier].name+'</small>';sound.note(e.tier===3?55:110,1.1,.16);sound.haptic(2);}
   if(e.phase==='burst'){stage.style.setProperty('--relic',RARITIES[e.tier].color);stage.classList.add('grade-'+e.tier);$('ritual-promise').textContent=RARITIES[e.tier].name;$('rarity-curtain').innerHTML='';$('ritual-item').innerHTML='<span class="reveal-rarity">'+RARITIES[e.tier].ja+' · '+RARITIES[e.tier].name+'</span><span class="reveal-item-name">'+RELICS[e.result.item.type].name+'</span><strong>'+relicPower(e.result.item)+'</strong><small>装備評価 · 個体品質 '+relicQuality(e.result.item)+(e.result.isNew?' · NEW DISCOVERY':'')+'</small>';if(e.tier>=3){sound.legendary();if(e.tier>=4)sound.note(e.tier===5?1046:740,1.4,.14);if(e.tier===5)sound.note(1568,1.8,.08);}else sound.chime(e.tier);sound.haptic(e.tier>=2?3:1);}
  }
- function roll(cache,count=1){if(busy||!canChange())return;const p=getProgress(),seeds=Array.from(crypto.getRandomValues(new Uint32Array(count))),result=cache&&count===0?appraiseAll(p):count===10?appraisalBatch(p,seeds):appraisal(p,seeds[0],{cache});if(result.error){$('appraisal-result').textContent=result.error;return;}
-  discoverLoadout(p);results=result.results||[result];if(results.some(r=>r.item.tier===5))onLesson('abyss-mythic','MYTHIC / 神話装備','深淵50F以降などで得られる最上位装備。固有能力と覚醒の組み合わせを試しましょう。輪廻の復活は探索中1回です。');last=results[0].item;busy=true;saveMessage='結果を保存しています…';$('appraise-save').textContent=saveMessage;$('camp-dialog').classList.add('drawing');
+ function roll(cache,count=1){if(busy||!canChange())return;appraisalPreview?.close();appraisalPreview=null;const p=getProgress(),seeds=Array.from(crypto.getRandomValues(new Uint32Array(count))),result=cache&&count===0?appraiseAll(p):count===10?appraisalBatch(p,seeds):appraisal(p,seeds[0],{cache});if(result.error){$('appraisal-result').textContent=result.error;return;}
+  discoverLoadout(p);results=result.results||[result];if(results.some(r=>r.item.tier===5))onLesson('abyss-mythic','MYTHIC / 神話装備','深淵80F以降などで得られる最上位装備。固有能力と覚醒の組み合わせを試しましょう。輪廻の復活は探索中1回です。');last=results[0].item;busy=true;saveMessage='結果を保存しています…';$('appraise-save').textContent=saveMessage;$('camp-dialog').classList.add('drawing');
   Promise.resolve(changed()).then(ok=>{saveMessage=ok===false?'保存待ち · 結果を保持して再送します':'抽選結果を保存しました';$('appraise-save').textContent=saveMessage;}).catch(()=>{$('appraise-save').textContent='保存待ち · 結果を保持しています';});
   sound.start();sequence=new RevealSequence(results,showReveal);render();sequence.start();$('appraisal-result').scrollIntoView?.({block:'start',behavior:'auto'});
  }
  document.querySelectorAll('[data-camp-tab]').forEach(b=>b.addEventListener('click',()=>{if(busy)return;tab=b.dataset.campTab;render();$('camp-dialog').scrollTop=0;if(tab==='ranking')rankings?.show();}));
  $('appraise-all').addEventListener('click',()=>roll(true,0));
- $('appraise-cache').addEventListener('click',()=>roll(true));$('buy-relic').addEventListener('click',()=>roll(false));$('buy-ten').addEventListener('click',()=>roll(false,10));$('camp-dialog').addEventListener('close',()=>{finishReveal(true);avatar.close();});
+ $('appraise-cache').addEventListener('click',()=>roll(true));$('buy-relic').addEventListener('click',()=>roll(false));$('buy-ten').addEventListener('click',()=>roll(false,10));$('camp-dialog').addEventListener('close',()=>{finishReveal(true);avatar.close();appraisalPreview?.close();appraisalPreview=null;});
  $('camp-dialog').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const p=getProgress();if(b.id==='skip-reveal'){finishReveal();return;}if(b.dataset.preview){last=p.inventory.find(i=>i.id===b.dataset.preview);detail();return;}if(!canChange())return;
   if(b.dataset.slot!==undefined){slot=Number(b.dataset.slot);page=0;render();}

@@ -9,7 +9,8 @@ const rows=[
  ['greed','強欲','宝+60%、被ダメージ+20%',2],['berserk','狂戦士','与ダメージ+50%、防御半減',0],['desperate','背水','HP30%未満で×2',0],['condition','絶好調','HP80%以上で移動+12%、火力+20%',2],['perfection','完璧主義','無傷15秒で与ダメージ+35%',1],['hunting','連続狩猟','撃破ごと火力+3%、被弾でリセット、最大30%',0],['asura','修羅','敵3体以上が近いと火力+50%',0],['solitary','孤高','近い敵1体のみなら×1.5',1],['sealthief','封印強奪','封印解除時HP・MP20回復',2],['assimilation','深淵同化','深淵10Fごと攻撃+4%、最大36%',1],['procession','百鬼夜行','自然湧きが早くなる代わりに撃破報酬+80%',2],['secondform','第二形態','復活後、探索終了まで火力+50%',1],['timestop','時間停止','会心時周囲の敵を2秒停止、12秒ごと',0],
  ['iceburial','氷葬','凍結中の敵に×1.8',0],['deepfreeze','凍結強化','氷槍の凍結+2秒',1],['manareturn','MP回復','撃破でMP4追加回復',2]
 ];
-export const POWERS=rows.map(([key,name,effect,slot],i)=>({key,name,effect,slot,minFloor:10+Math.floor(i/14)*15}));
+const addedRows=[['twinstar','双星','光弾が正面の2体に命中する',0],['afterbolt','残響弾','3命中ごと、同じ敵へ35%の追撃',0],['thunder','雷鎖','命中時5mの3体へ25%伝播・0.7秒停止',0],['death','死神','通常敵へ8%で即死。ボスには無効',0],['substitute','身代わり','HP50%以上で致命打を受けるとHP1を残す。30秒ごと',1],['greedlamp','強欲の灯','発掘品質+25%・LIGHT消費+20%',2],['sealeater','封印喰らい','封印解除でLIGHT12回復、HP5消費（HP1を残す）',2],['backlight','逆光','敵の背後からの攻撃×1.6',0]];
+export const POWERS=[...rows,...addedRows].map(([key,name,effect,slot],i)=>({key,name,effect,slot,minFloor:10+Math.floor(i/14)*15}));
 export const SYNERGIES=[
  {key:'supernova',name:'超新星',requires:['blast','chain','corpse'],effect:'撃破が6mの超新星に進化。周囲へ最大HPの70%ダメージ'},
  {key:'permafrost',name:'永久凍土',requires:['iceburial','deepfreeze','manareturn'],effect:'氷槍が周囲5mの敵を4秒凍結、命中でMP3回復'},
@@ -31,7 +32,7 @@ export const MYTHICS=[
  {key:'eater',name:'深淵喰らい',slot:0,effect:'撃破した敵Lvに応じ探索中成長。Lv7以上を100体撃破で進化',powers:['hunting','devourlight'],mythic:true,minFloor:80},
  {key:'kaleidoscope',name:'万華鏡',slot:0,effect:'光弾が貫通・反射・分裂',powers:['pierce','ricochet','split'],mythic:true,minFloor:99}
 ];
-export const ABYSS_GEAR=[...POWERS.map(p=>({...p,name:p.name+'の'+['杖','護符','灯芯'][p.slot],powers:[p.key],exclusive:true})),...CURSED_GEAR,...MYTHICS].map(p=>({...p,exclusive:true,abyss:true}));
+export const ABYSS_GEAR=[...POWERS.slice(0,rows.length).map(p=>({...p,name:p.name+'の'+['杖','護符','灯芯'][p.slot],powers:[p.key],exclusive:true})),...CURSED_GEAR,...MYTHICS,...POWERS.slice(rows.length).map(p=>({...p,name:p.name+'の'+['杖','護符','灯芯'][p.slot],powers:[p.key]}))].map(p=>({...p,exclusive:true,abyss:true}));
 export const awakened=powers=>SYNERGIES.filter(s=>s.requires.every(k=>powers.includes(k)));
-export function composePowers(items,relics){const powers=[],curses=[];for(const item of items){const def=relics[item.type];powers.push(...(def?.powers||[]),...(item.extraPowers||[]));if(def?.curse)curses.push(def.curse);if(def?.mythic)powers.push(def.key);if(item.evolved&&def?.key==='eater')powers.push('eaterking');}return{powers:[...new Set(powers)],curses:[...new Set(curses)]};}
+export function composePowers(items,relics){const powers=[],curses=[];for(const item of items){const def=relics[item.type];powers.push(...(def?.powers||[]),...(item.extraPowers||[]),...(item.enchants||[]).filter(e=>e.key==='power').map(e=>e.power));if(def?.curse)curses.push(def.curse);if(def?.mythic)powers.push(def.key);if(item.evolved&&def?.key==='eater')powers.push('eaterking');}return{powers:[...new Set(powers)],curses:[...new Set(curses)]};}
 export function evolutionProgress(progress,enemy){const changed=[];if((enemy.level||1)<7)return changed;for(const id of progress.equipped){const item=progress.inventory.find(i=>i.id===id);if(item?.type!==21+ABYSS_GEAR.findIndex(d=>d.key==='eater'))continue;item.evolutionKills=Math.min(100,(item.evolutionKills||0)+1);if(item.evolutionKills===100&&!item.evolved){item.evolved=true;changed.push(item);}}return changed;}

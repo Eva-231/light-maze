@@ -1,8 +1,8 @@
 import {ABYSS_MAX_FLOOR,BOONS,floorRules,EVENT_TYPES} from './abyss-rules.js';
 const copy=x=>JSON.parse(JSON.stringify(x));
-export const freshAbyss=()=>({unlocked:false,bestFloor:0,cleared99:false,checkpoint:null,activeId:null,completedRuns:[],mutators:[]});
+export const freshAbyss=()=>({unlocked:false,bestFloor:0,cleared99:false,revivalStock:0,checkpoint:null,activeId:null,completedRuns:[],mutators:[]});
 export function canEnterAbyss(p){return !!p.chapterStars?.['18'];}
-export function newAbyssRun(p,seed,mutators=[]){if(!canEnterAbyss(p))throw Error('18面クリアで解放');return{id:(seed>>>0).toString(36)+'-'+Date.now().toString(36),seed:seed>>>0,floor:1,route:'normal',mutators:p.abyss?.cleared99?mutators:[],seals:0,cleared:false,bag:0,caches:[],kills:0,elapsed:0,boons:[],hp:null,mp:null,light:null,reviveUsed:false,effectState:{},claimed:[],bossFloors:[],status:'exploring'};}
+export function newAbyssRun(p,seed,mutators=[]){if(!canEnterAbyss(p))throw Error('18面クリアで解放');return{id:(seed>>>0).toString(36)+'-'+Date.now().toString(36),seed:seed>>>0,floor:1,route:'normal',mutators:p.abyss?.cleared99?mutators:[],seals:0,cleared:false,bag:0,caches:[],kills:0,elapsed:0,boons:[],hp:null,mp:null,light:null,reviveUsed:false,revivals:0,revivalCharges:Math.min(3,p.abyss?.revivalStock||0),effectState:{},claimed:[],bossFloors:[],status:'exploring'};}
 export const abyssFloorSeed=run=>(run.seed^Math.imul(run.floor,2654435761))>>>0;
 export function gateUnlocked(run){return run.seals===3&&run.cleared===true;}
 export function clearAbyssFloor(run){if(run.seals!==3)return false;run.cleared=true;return true;}

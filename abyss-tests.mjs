@@ -13,11 +13,24 @@ import {discover,discoverLoadout,codexEntries,synergyStatus} from './public/code
 import {expeditionPlan,TRAP_TYPES,advanceTraps} from './public/expedition.js';
 import {validProgress,competitiveScore} from './src/worker.js';
 import {RevealSequence} from './public/reveal-sequence.js';
+import {rollGrade,gradeScale,materialStrength,enchantOptions,fuseEquipment,exchangeRevival,consumeRevival,canRevive} from './public/equipment-crafting.js';
 let passed=0;const test=(title,fn)=>{fn();console.log('PASS',title);passed++;};
 const unlocked=()=>{const p=newProgress();p.floor=18;p.chapterStars['18']=1;p.abyss.unlocked=true;return p;};
 const prepareRun=p=>Object.assign(newAbyssRun(p,1207),{hp:100,mp:60,light:100,seals:3,cleared:true,kills:0});
 const findType=key=>RELICS.findIndex(r=>r.key===key&&r.abyss);
 const gear=(key,seed=1)=>rollRelic(seed,2,0,{forcedType:findType(key),abyssFloor:99});
+test('Grade scales affixes and material quality; four enchant slots multiply, consume once, and preserve protected items',()=>{
+ for(const [f,g] of [[10,1],[30,2],[50,3],[70,4],[90,5]])assert.equal(rollGrade(f,()=>0,true),g);
+ const low={...gear('blast',10),abyssGrade:1},high={...low,abyssGrade:5};assert(gradeScale(high)>gradeScale(low));assert(materialStrength(high)>materialStrength(low));assert(materialStrength(low)>materialStrength({tier:3}));
+ const p=unlocked(),base=gear('blast',90);p.inventory=[base];p.equipped[0]=base.id;
+ for(let n=0;n<4;n++){const m={...gear('chain',100+n),abyssGrade:5};p.inventory.push(m);const options=enchantOptions(m,RELICS),at=options.findIndex(e=>e.key==='enemy'+m.type%6);assert(!fuseEquipment(p,base.id,m.id,at,-1,RELICS).error);assert(!p.inventory.some(i=>i.id===m.id));assert(fuseEquipment(p,base.id,m.id,at,-1,RELICS).error);}
+ assert.equal(base.enchants.length,4);const multiplier=loadoutStats(p).enemyMultipliers[findType('chain')%6];assert(Math.abs(multiplier-Math.min(3,Math.pow(1.355,4)))<1e-9);
+ const m=gear('corpse',22);p.inventory.push(m);const at=enchantOptions(m,RELICS).findIndex(e=>e.power==='corpse');assert(fuseEquipment(p,base.id,m.id,at,-1,RELICS).error);m.favorite=true;assert(fuseEquipment(p,base.id,m.id,at,0,RELICS).error);m.favorite=false;assert(!fuseEquipment(p,base.id,m.id,at,0,RELICS).error);assert(loadoutStats(p).powers.includes('corpse'));assert(!loadoutStats(p,true).powers.includes('corpse'));assert(validProgress(p));const reloaded=migrateProgress(JSON.parse(JSON.stringify(p)));assert.deepEqual(reloaded.inventory[0].enchants,base.enchants);base.enchants.push(base.enchants[0]);assert(!validProgress(p));
+});
+test('Revival exchange costs exact owned unprotected equipment, revives only three times and survives checkpoint reload',()=>{
+ for(const [tier,cost] of [[3,10],[4,8],[5,3]]){const p=unlocked();p.inventory=Array.from({length:cost},(_,n)=>tier===3?rollRelic(n+90,0,0,{forcedType:18}):gear(tier===4?'blast':'eater',n+200));const ids=p.inventory.map(i=>i.id);assert(exchangeRevival(p,[...ids,ids[0]]).error);p.inventory[0].favorite=true;assert(exchangeRevival(p,ids).error);p.inventory[0].favorite=false;assert(!exchangeRevival(p,ids).error);assert.equal(p.inventory.length,0);assert.equal(p.abyss.revivalStock,1);assert(exchangeRevival(p,ids).error);assert(validProgress(p));}
+ const p=unlocked();p.abyss.revivalStock=8;const run=prepareRun(p),player={hp:0,mp:0,light:0,lightMax:100,poisonUntil:99},stats=loadoutStats(p);for(let n=0;n<3;n++){assert(canRevive(run));assert(consumeRevival(p,run,player,stats));assert.equal(player.hp,70);assert.equal(player.light,60);assert.equal(player.poisonUntil,0);assert.equal(run.revivals,n+1);}assert(!consumeRevival(p,run,player,stats));assert.equal(p.abyss.revivalStock,5);assert.equal(run.reviveUsed,false);assert(suspendAbyss(p,run));assert(validProgress(p));const q=migrateProgress(JSON.parse(JSON.stringify(p))),resumed=consumeCheckpoint(q);assert.equal(resumed.revivals,3);assert(!canRevive(resumed));
+});
 test('Bonus floors are safe across every spawn path; boss floors stock extra LIGHT; Mythic begins at 80F with 5% odds',()=>{
  for(const f of [25,50,75,99]){c.generateStage(1900+f,18,1,false,{abyssFloor:f,route:'hunt',mutators:['horde','night']});const rules=floorRules(f),enemies=enemyPlan(20);assert.equal(enemies.length,0);assert.equal(spawnTrapEnemies(enemies,c.START,3).length,0);assert.equal(naturalSpawn(enemies,c.START,20).length,0);assert.equal(spawnDue({},1000,rules,enemies),0);assert.equal(expeditionPlan().traps.length,0);assert.equal(rules.light,0);assert.equal(rules.bonusCount,({25:1,50:2,75:3,99:1})[f]);const run=prepareRun(unlocked());run.floor=f;const token=floorRewardToken(run);assert.equal(token.minTier,4);assert.equal(!!token.mythic,f===99);assert.equal(floorRewardToken(run),null);}
  c.generateStage(900,18,1,false,{abyssFloor:9});const ordinary=c.orbPlan();c.generateStage(900,18,1,false,{abyssFloor:10});assert(c.orbPlan().length>ordinary.length*2);assert(c.orbPlan().every(o=>o.amount>=28));

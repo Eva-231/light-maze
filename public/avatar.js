@@ -103,7 +103,7 @@ export class AvatarPreview{
     this.scene=new T.Scene();this.camera=new T.PerspectiveCamera(34,1,.1,20);this.camera.position.set(.13,1.56,6.25);this.camera.lookAt(0,1.48,0);this.scene.add(new T.HemisphereLight(0xd6e5ff,0x263039,2.1));
     const key=new T.DirectionalLight(0xf8e4c4,4);key.position.set(-2,4,3);this.scene.add(key);const rim=new T.DirectionalLight(0x839fce,3.5);rim.position.set(2,2,-2);this.scene.add(rim);const fill=new T.DirectionalLight(0xa8cde4,1.3);fill.position.set(2,1,2);this.scene.add(fill);
    }
-   const signature=progress.equipped.map(id=>{const i=progress.inventory.find(a=>a.id===id);return id+':'+(i?.evolved||false)+':'+(i?.upgrade||0);}).join('|');if(signature!==this.signature||!this.rig){if(this.rig)disposeAvatar(this.rig.group);this.rig=buildEquipmentAvatar(progress);this.scene.add(this.rig.group);this.signature=signature;}
+   const signature=progress.equipped.map(id=>{const i=progress.inventory.find(a=>a.id===id);return id+':'+(i?.evolved||false)+':'+(i?.upgrade||0)+':'+(i?.abyssGrade||0)+':'+JSON.stringify(i?.enchants||[]);}).join('|');if(signature!==this.signature||!this.rig){if(this.rig)disposeAvatar(this.rig.group);this.rig=buildEquipmentAvatar(progress);this.scene.add(this.rig.group);this.signature=signature;}
    const width=Math.max(180,this.canvas.clientWidth||330),height=360;this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();cancelAnimationFrame(this.frame);this.frame=requestAnimationFrame(t=>this.draw(t));
   }catch{this.canvas.hidden=true;}
  }
