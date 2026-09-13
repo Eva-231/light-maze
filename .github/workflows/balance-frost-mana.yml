@@ -1,0 +1,36 @@
+name: Apply frost and mana balance
+on:
+  push:
+    paths: ['.github/workflows/balance-frost-mana.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch balance
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('public/enemies.js')
+          s=p.read_text()
+          s=s.replace("{name:'氷環',key:'frost',cost:16,cooldown:0,description:'自分の周囲6.3mを凍結爆破。最大12体へ強めのダメージ＋足止め。MPがある限り連続使用できる。'}", "{name:'氷環',key:'frost',cost:16,cooldown:0,description:'現在いる部屋全体を凍結爆破。部屋内の全敵へダメージ＋足止め。MPがある限り連続使用できる。'}")
+          s=s.replace("const frostRadius=6.3,cone=", "const frostRadius=14,currentRoom=grid[indexAt(player.x,player.z)],cone=")
+          s=s.replace("Math.hypot(e.x-player.x,e.z-player.z)<(index===1?frostRadius:12)&&lineOfSight(player.x,player.z,e.x,e.z)&&(index===1||index===2||facing(player,e.x,e.z,cone))", "(index===1?grid[indexAt(e.x,e.z)]===currentRoom:Math.hypot(e.x-player.x,e.z-player.z)<12&&lineOfSight(player.x,player.z,e.x,e.z))&&(index===1||index===2||facing(player,e.x,e.z,cone))")
+          s=s.replace("index===1?targets.slice(0,12):targets", "index===1?targets:targets")
+          p.write_text(s)
+          p=Path('public/relics.js')
+          s=p.read_text().replace("mpRegen:.30,", "mpRegen:1.20,")
+          p.write_text(s)
+          p=Path('rpg-tests.mjs')
+          s=p.read_text().replace("assert.equal(r.area,6.3);", "assert.equal(r.area,14);")
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/enemies.js public/relics.js rpg-tests.mjs
+          git commit -m 'balance: room-wide frost and faster mana regeneration'
+          git push
