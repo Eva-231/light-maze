@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using LightMaze.Combat;
 using LightMaze.Player;
 using LightMaze.Visuals;
+using LightMaze.Production;
 
 namespace LightMaze.Enemies
 {
@@ -38,6 +40,13 @@ namespace LightMaze.Enemies
 
         public float Hp01 => maxHp <= 0f ? 0f : hp / maxHp;
         public PrototypeEnemyKind Kind => kind;
+        public bool IsFrozen => !dead && Time.time < frozenUntil;
+        public bool IsDead => dead;
+
+        public event Action Attacked;
+        public event Action Hit;
+        public event Action Frozen;
+        public event Action Died;
 
         public void Configure(
             PrototypeEnemyKind enemyKind,
@@ -136,6 +145,10 @@ namespace LightMaze.Enemies
 
         void Attack()
         {
+            Attacked?.Invoke();
+            if (kind == PrototypeEnemyKind.AbyssGuardian)
+                ProductionFx.SpawnGuardianAttack(transform.position + transform.forward * 1.25f, transform.rotation);
+
             if (playerMotor != null && playerMotor.IsDodging)
             {
                 PrototypeVfx.SpawnRing(player.position, new Color(.4f, .8f, 1f), 1f, .18f, .025f);
@@ -154,6 +167,8 @@ namespace LightMaze.Enemies
             if (dead || damage <= 0f) return;
             awakened = true;
             hp = Mathf.Max(0f, hp - damage);
+            Hit?.Invoke();
+            ProductionFx.SpawnEnemyHit(transform.position + Vector3.up, kind);
             StopAllCoroutines();
             StartCoroutine(HitFlash());
             if (hp <= 0f) Die();
@@ -164,6 +179,7 @@ namespace LightMaze.Enemies
             if (dead) return;
             awakened = true;
             frozenUntil = Mathf.Max(frozenUntil, Time.time + Mathf.Max(0f, seconds));
+            Frozen?.Invoke();
             PrototypeVfx.SpawnBurst(transform.position + Vector3.up, new Color(.3f, .85f, 1f) * 1.8f, 1.1f, 10);
         }
 
@@ -188,12 +204,9 @@ namespace LightMaze.Enemies
         {
             if (dead) return;
             dead = true;
-            Color c = kind == PrototypeEnemyKind.AbyssGuardian
-                ? new Color(1f, .65f, .18f) * 2f
-                : new Color(.55f, .3f, 1f) * 2f;
-            PrototypeVfx.SpawnBurst(transform.position + Vector3.up, c, kind == PrototypeEnemyKind.AbyssGuardian ? 2f : 1.2f, kind == PrototypeEnemyKind.AbyssGuardian ? 24 : 14);
-            PrototypeVfx.SpawnRing(transform.position, c, kind == PrototypeEnemyKind.AbyssGuardian ? 3f : 1.6f, .5f, .08f);
-            Destroy(gameObject, .04f);
+            Died?.Invoke();
+            ProductionFx.SpawnEnemyDeath(transform.position, kind);
+            Destroy(gameObject, .08f);
         }
     }
 }
