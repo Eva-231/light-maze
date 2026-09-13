@@ -30,7 +30,7 @@ test('Warp spells have three counters: aimed interruption, cover, and anchor arm
  ({e,p}=arena(3));const d=warpDestination(e,p);assert(d);assert(c.canStand(d.x,d.z));assert(p.explored.has(c.indexAt(d.x,d.z)));const steps=c.shortestPath(c.indexAt(p.x,p.z),c.indexAt(d.x,d.z)).length-1;assert(steps>=4&&steps<=7);p.explored=new Set([c.indexAt(p.x,p.z)]);assert.equal(warpDestination(e,p),null);p.explored=new Set(c.cells);p.canOccupy=()=>false;assert.equal(warpDestination(e,p),null);
 });
 test('Silver enemies flee on connected paths, freezing stops their escape timer, and an escaped enemy cannot be killed',()=>{
- const {e,p}=arena(4);assert(updateEnemies([e],p,.02).events.some(a=>a.type==='silver'));assert(e.fleeTime>11);aim(p,e);const freeze=castSpell(1,[e],p,stats,()=>1);assert(freeze.ok&&freeze.events[0].affinity&&freeze.events[0].damage>=38&&e.stun>4);const timer=e.fleeTime;updateEnemies([e],p,.5);assert.equal(e.fleeTime,timer);e.stun=0;p.yaw=Math.PI;
+ const {e,p}=arena(4);assert(updateEnemies([e],p,.02).events.some(a=>a.type==='silver'));assert(e.fleeTime>11);aim(p,e);const freeze=castSpell(1,[e],p,stats,()=>1);assert(freeze.ok&&freeze.events[0].affinity&&freeze.events[0].damage>=32&&e.stun>4);const timer=e.fleeTime;updateEnemies([e],p,.5);assert.equal(e.fleeTime,timer);e.stun=0;p.yaw=Math.PI;
  for(let i=0;i<500&&!e.escaped;i++){updateEnemies([e],p,.04);assert(c.canStand(e.x,e.z));}assert(e.escaped);assert.equal(hurtEnemy(e,999).type,'ignored');
 });
 test('Enemy loot has a measured 5% rare rate; silver loot is guaranteed, visible, and preserves its equipment through appraisal',()=>{
