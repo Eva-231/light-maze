@@ -28,9 +28,12 @@ namespace LightMaze.Enemies
         float touchDamage;
         float attackRange;
         float attackCooldown;
+        float aggroRange;
+        float activationTime;
         float nextAttackTime;
         float frozenUntil;
         Color baseEmission;
+        bool awakened;
         bool dead;
 
         public float Hp01 => maxHp <= 0f ? 0f : hp / maxHp;
@@ -54,31 +57,36 @@ namespace LightMaze.Enemies
             {
                 case PrototypeEnemyKind.ShadowSoldier:
                     maxHp = 72f;
-                    moveSpeed = 3.2f;
-                    touchDamage = 10f;
+                    moveSpeed = 3f;
+                    touchDamage = 8f;
                     attackRange = 1.7f;
-                    attackCooldown = 1.15f;
-                    baseEmission = new Color(1f, .05f, .08f) * 2.5f;
+                    attackCooldown = 1.2f;
+                    aggroRange = 10.5f;
+                    baseEmission = new Color(1f, .045f, .07f) * 1.55f;
                     break;
                 case PrototypeEnemyKind.RiftWolf:
                     maxHp = 58f;
-                    moveSpeed = 5.4f;
-                    touchDamage = 8f;
+                    moveSpeed = 4.8f;
+                    touchDamage = 7f;
                     attackRange = 1.5f;
-                    attackCooldown = .85f;
-                    baseEmission = new Color(1f, .08f, .18f) * 3.2f;
+                    attackCooldown = .9f;
+                    aggroRange = 12f;
+                    baseEmission = new Color(1f, .065f, .14f) * 1.9f;
                     break;
                 default:
                     maxHp = 240f;
-                    moveSpeed = 2.25f;
-                    touchDamage = 22f;
+                    moveSpeed = 1.95f;
+                    touchDamage = 15f;
                     attackRange = 2.5f;
-                    attackCooldown = 1.65f;
-                    baseEmission = new Color(1f, .65f, .16f) * 3f;
+                    attackCooldown = 1.8f;
+                    aggroRange = 8.5f;
+                    baseEmission = new Color(1f, .52f, .11f) * 1.45f;
                     break;
             }
 
             hp = maxHp;
+            activationTime = Time.time + 3f;
+            nextAttackTime = activationTime + .75f;
             ApplyEmission(baseEmission);
         }
 
@@ -88,7 +96,7 @@ namespace LightMaze.Enemies
 
             if (Time.time < frozenUntil)
             {
-                ApplyEmission(new Color(.3f, .85f, 1f) * 4.5f);
+                ApplyEmission(new Color(.3f, .85f, 1f) * 2.5f);
                 return;
             }
             ApplyEmission(baseEmission);
@@ -98,14 +106,25 @@ namespace LightMaze.Enemies
             float distance = toPlayer.magnitude;
             if (distance <= .01f) return;
 
+            if (!awakened)
+            {
+                if (Time.time < activationTime || distance > aggroRange) return;
+                awakened = true;
+                nextAttackTime = Mathf.Max(nextAttackTime, Time.time + .55f);
+                Color wakeColor = kind == PrototypeEnemyKind.AbyssGuardian
+                    ? new Color(1f, .62f, .14f) * 1.4f
+                    : new Color(1f, .08f, .14f) * 1.35f;
+                PrototypeVfx.SpawnRing(transform.position, wakeColor, kind == PrototypeEnemyKind.AbyssGuardian ? 2.2f : 1.25f, .35f, .045f);
+            }
+
             Quaternion targetRotation = Quaternion.LookRotation(toPlayer.normalized, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 1f - Mathf.Exp(-10f * Time.deltaTime));
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 1f - Mathf.Exp(-9f * Time.deltaTime));
 
             if (distance > attackRange)
             {
                 float speed = moveSpeed;
                 if (kind == PrototypeEnemyKind.RiftWolf && distance > 5f)
-                    speed *= 1.22f;
+                    speed *= 1.16f;
                 transform.position += toPlayer.normalized * speed * Time.deltaTime;
             }
             else if (Time.time >= nextAttackTime)
@@ -125,14 +144,15 @@ namespace LightMaze.Enemies
 
             playerVitals.Damage(touchDamage);
             Color c = kind == PrototypeEnemyKind.AbyssGuardian
-                ? new Color(1f, .72f, .2f) * 2f
-                : new Color(1f, .08f, .12f) * 2f;
-            PrototypeVfx.SpawnBurst(player.position + Vector3.up, c, .8f, 9);
+                ? new Color(1f, .62f, .16f) * 1.45f
+                : new Color(1f, .07f, .11f) * 1.45f;
+            PrototypeVfx.SpawnBurst(player.position + Vector3.up, c, .8f, 8);
         }
 
         public void TakeDamage(float damage)
         {
             if (dead || damage <= 0f) return;
+            awakened = true;
             hp = Mathf.Max(0f, hp - damage);
             StopAllCoroutines();
             StartCoroutine(HitFlash());
@@ -142,14 +162,15 @@ namespace LightMaze.Enemies
         public void Freeze(float seconds)
         {
             if (dead) return;
+            awakened = true;
             frozenUntil = Mathf.Max(frozenUntil, Time.time + Mathf.Max(0f, seconds));
-            PrototypeVfx.SpawnBurst(transform.position + Vector3.up, new Color(.3f, .85f, 1f) * 2.5f, 1.1f, 12);
+            PrototypeVfx.SpawnBurst(transform.position + Vector3.up, new Color(.3f, .85f, 1f) * 1.8f, 1.1f, 10);
         }
 
         IEnumerator HitFlash()
         {
-            ApplyEmission(Color.white * 6f);
-            yield return new WaitForSeconds(.065f);
+            ApplyEmission(Color.white * 3.2f);
+            yield return new WaitForSeconds(.055f);
             if (!dead && Time.time >= frozenUntil) ApplyEmission(baseEmission);
         }
 
@@ -168,9 +189,9 @@ namespace LightMaze.Enemies
             if (dead) return;
             dead = true;
             Color c = kind == PrototypeEnemyKind.AbyssGuardian
-                ? new Color(1f, .7f, .2f) * 3f
-                : new Color(.55f, .3f, 1f) * 2.8f;
-            PrototypeVfx.SpawnBurst(transform.position + Vector3.up, c, kind == PrototypeEnemyKind.AbyssGuardian ? 2f : 1.2f, kind == PrototypeEnemyKind.AbyssGuardian ? 30 : 18);
+                ? new Color(1f, .65f, .18f) * 2f
+                : new Color(.55f, .3f, 1f) * 2f;
+            PrototypeVfx.SpawnBurst(transform.position + Vector3.up, c, kind == PrototypeEnemyKind.AbyssGuardian ? 2f : 1.2f, kind == PrototypeEnemyKind.AbyssGuardian ? 24 : 14);
             PrototypeVfx.SpawnRing(transform.position, c, kind == PrototypeEnemyKind.AbyssGuardian ? 3f : 1.6f, .5f, .08f);
             Destroy(gameObject, .04f);
         }
