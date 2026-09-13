@@ -5,16 +5,16 @@ namespace LightMaze.CameraSystem
 {
     public sealed class PrototypeOrbitCamera : MonoBehaviour
     {
-        [SerializeField] float distance = 6.2f;
-        [SerializeField] float height = 1.9f;
-        [SerializeField] float sensitivity = .13f;
-        [SerializeField] float pitchMin = -15f;
-        [SerializeField] float pitchMax = 58f;
-        [SerializeField] float smoothTime = .055f;
+        [SerializeField] float distance = 7.4f;
+        [SerializeField] float height = 1.55f;
+        [SerializeField] float sensitivity = .11f;
+        [SerializeField] float pitchMin = -10f;
+        [SerializeField] float pitchMax = 52f;
+        [SerializeField] float smoothTime = .05f;
 
         Transform target;
         float yaw;
-        float pitch = 18f;
+        float pitch = 14f;
         Vector3 velocity;
         float shakeTimer;
         float shakeAmount;
@@ -22,13 +22,28 @@ namespace LightMaze.CameraSystem
         public void SetTarget(Transform value)
         {
             target = value;
-            if (target != null) yaw = target.eulerAngles.y;
+            if (target != null)
+            {
+                yaw = target.eulerAngles.y;
+                SnapToTarget();
+            }
         }
 
         void Start()
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+            SnapToTarget();
+        }
+
+        void SnapToTarget()
+        {
+            if (target == null) return;
+            Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+            Vector3 focus = target.position + Vector3.up * height;
+            transform.position = focus - rotation * Vector3.forward * distance;
+            transform.rotation = rotation;
+            velocity = Vector3.zero;
         }
 
         public void Shake(float amount = .16f, float duration = .12f)
