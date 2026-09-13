@@ -1,6 +1,6 @@
 using UnityEngine;
 using LightMaze.Enemies;
-using LightMaze.Visuals;
+using LightMaze.Production;
 
 namespace LightMaze.Combat
 {
@@ -50,15 +50,14 @@ namespace LightMaze.Combat
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);
-                PrototypeVfx.SpawnBurst(transform.position, new Color(.35f, .82f, 1f) * 2.5f, .55f, 10);
-                PrototypeVfx.SpawnRing(transform.position, Color.white * 2f, .55f, .18f, .035f);
+                ProductionFx.SpawnBoltImpact(transform.position, true);
                 Destroy(gameObject);
                 return;
             }
 
             if (!other.isTrigger)
             {
-                PrototypeVfx.SpawnBurst(transform.position, new Color(.25f, .65f, 1f) * 1.5f, .35f, 5);
+                ProductionFx.SpawnBoltImpact(transform.position, false);
                 Destroy(gameObject);
             }
         }
