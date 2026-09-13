@@ -2,7 +2,22 @@ import * as T from './vendor/three.module.js';
 import {gearGrade} from './equipment-crafting.js';
 import {ENEMY_TYPES} from './enemies.js';
 import {RARITIES,RELICS} from './relics.js';
-export function enemyLabel(enemy){if(typeof document==='undefined')return null;const canvas=document.createElement('canvas');canvas.width=512;canvas.height=64;const c=canvas.getContext('2d');if(!c?.fillText)return null;c.font='600 26px sans-serif';c.textAlign='center';c.fillStyle=enemy.elite?'#ffe2a1':enemy.level>=7?'#ffaea7':'#d5e8df';c.fillText((enemy.label||'Lv.'+(enemy.level||1))+' '+ENEMY_TYPES[enemy.kind].name,256,40);const texture=new T.CanvasTexture(canvas),sprite=new T.Sprite(new T.SpriteMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false}));sprite.scale.set(3.6,.45,1);sprite.position.y=enemy.kind===5?2.7:2.3;return sprite;}
+import {stylizeEnemy,stylizeFirstPerson} from './character-style.js';
+
+// Visual upgrade hook: enemyLabel is called immediately before an enemy group is
+// attached to the scene. Keep the gameplay objects untouched and decorate that
+// group at scene-add time, so collision/AI/balance stay exactly the same.
+let pendingEnemyStyle=null;
+const originalAdd=T.Object3D.prototype.add;
+const cameraHands=new WeakMap();
+T.Object3D.prototype.add=function(...objects){
+ const result=originalAdd.apply(this,objects);
+ if(pendingEnemyStyle){const g=objects.find(o=>o?.isGroup);if(g&&!this.isCamera){stylizeEnemy(g,pendingEnemyStyle.kind,pendingEnemyStyle.color);pendingEnemyStyle=null;}}
+ if(this.isCamera){for(const g of objects.filter(o=>o?.isGroup)){const list=cameraHands.get(this)||[];list.push(g);cameraHands.set(this,list);if(list.length===2)queueMicrotask(()=>stylizeFirstPerson(list[0],list[1]));}}
+ return result;
+};
+
+export function enemyLabel(enemy){pendingEnemyStyle={kind:enemy.kind,color:ENEMY_TYPES[enemy.kind].color};if(typeof document==='undefined')return null;const canvas=document.createElement('canvas');canvas.width=512;canvas.height=64;const c=canvas.getContext('2d');if(!c?.fillText)return null;c.font='600 26px sans-serif';c.textAlign='center';c.fillStyle=enemy.elite?'#ffe2a1':enemy.level>=7?'#ffaea7':'#d5e8df';c.fillText((enemy.label||'Lv.'+(enemy.level||1))+' '+ENEMY_TYPES[enemy.kind].name,256,40);const texture=new T.CanvasTexture(canvas),sprite=new T.Sprite(new T.SpriteMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false}));sprite.scale.set(3.6,.45,1);sprite.position.y=enemy.kind===5?2.7:2.3;return sprite;}
 export function featureMesh(item,chest=false){const group=new T.Group(),color=chest?0xffd48a:0xaaf9e4,mat=new T.MeshStandardMaterial({color:chest?0x877044:0x355e53,emissive:color,emissiveIntensity:.3,roughness:.3,metalness:.7}),core=new T.Mesh(chest?new T.BoxGeometry(.9,.55,.65):new T.OctahedronGeometry(.38),mat);core.position.y=.5;group.add(core);const ring=new T.Mesh(new T.TorusGeometry(.65,.03,5,28),new T.MeshBasicMaterial({color}));ring.rotation.x=Math.PI/2;ring.position.y=.09;group.add(ring);group.position.set(item.x,0,item.z);group.userData={item,core,chest};return group;}
 // Remove only resources that are no longer referenced anywhere in the remaining scene.
 export function retireMeshes(root,objects,retained=[]){const deadG=new Set(),deadM=new Set(),liveG=new Set(),liveM=new Set(retained);for(const obj of objects){obj?.removeFromParent();obj?.traverse(o=>{if(o.geometry)deadG.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[])deadM.add(m);});}root.traverse(o=>{if(o.geometry)liveG.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[])liveM.add(m);});for(const g of deadG)if(!liveG.has(g))g.dispose();for(const m of deadM)if(!liveM.has(m)){m.map?.dispose();m.dispose();}}
