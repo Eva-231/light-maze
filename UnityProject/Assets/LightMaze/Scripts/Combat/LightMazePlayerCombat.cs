@@ -26,6 +26,8 @@ namespace LightMaze.Combat
         const float IceDamage = 26f;
         const float IceFreeze = 3.2f;
         float nextBoltTime;
+        float helpVisibleUntil;
+        bool helpPinned;
         bool subscribed;
 
         public float LightValue => lightValue;
@@ -44,6 +46,7 @@ namespace LightMaze.Combat
         {
             if (vitals == null) vitals = GetComponent<PlayerVitals>();
             lightValue = MaxLight;
+            helpVisibleUntil = Time.time + 7f;
         }
 
         void Start() => EnsureSubscribed();
@@ -65,9 +68,13 @@ namespace LightMaze.Combat
         {
             if (vitals == null) return;
 
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.hKey.wasPressedThisFrame)
+                helpPinned = !helpPinned;
+
             if (vitals.IsDead)
             {
-                if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
                     SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
                 return;
             }
@@ -75,7 +82,6 @@ namespace LightMaze.Combat
             lightValue = Mathf.Max(0f, lightValue - LightDrainPerSecond * Time.deltaTime);
             UpdateCoreLight();
 
-            var keyboard = Keyboard.current;
             var mouse = Mouse.current;
 
             bool boltPressed = (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked)
@@ -90,8 +96,9 @@ namespace LightMaze.Combat
         {
             if (coreLight == null) return;
             float t = lightValue / MaxLight;
-            coreLight.intensity = Mathf.Lerp(1.1f, 7.2f, t);
-            coreLight.range = Mathf.Lerp(3.5f, 10f, t);
+            coreLight.intensity = Mathf.Lerp(.65f, 3.4f, t);
+            coreLight.range = Mathf.Lerp(3f, 7.5f, t);
+            coreLight.shadows = LightShadows.None;
         }
 
         void CastLightBolt()
@@ -105,28 +112,29 @@ namespace LightMaze.Combat
             var bolt = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bolt.name = "Light Bolt";
             bolt.transform.position = origin;
-            bolt.transform.localScale = Vector3.one * .24f;
+            bolt.transform.localScale = Vector3.one * .21f;
             bolt.GetComponent<Renderer>().material = PrototypeVfx.CreateLitMaterial(
-                new Color(.35f, .72f, 1f),
-                new Color(.35f, .82f, 1f) * 7f,
+                new Color(.25f, .58f, .9f),
+                new Color(.28f, .72f, 1f) * 4f,
                 .85f);
 
             var light = bolt.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(.35f, .75f, 1f);
-            light.intensity = 5f;
-            light.range = 4.5f;
+            light.color = new Color(.32f, .7f, 1f);
+            light.intensity = 2.4f;
+            light.range = 3.4f;
+            light.shadows = LightShadows.None;
 
             var trail = bolt.AddComponent<TrailRenderer>();
             trail.time = .18f;
-            trail.startWidth = .18f;
+            trail.startWidth = .15f;
             trail.endWidth = 0f;
             trail.minVertexDistance = .03f;
-            trail.material = PrototypeVfx.CreateUnlitMaterial(new Color(.45f, .85f, 1f) * 2.8f);
+            trail.material = PrototypeVfx.CreateUnlitMaterial(new Color(.4f, .8f, 1f) * 2f);
 
             var projectile = bolt.AddComponent<LightBoltProjectile>();
             projectile.Configure(direction, transform, 18f);
-            PrototypeVfx.SpawnRing(origin, new Color(.45f, .85f, 1f) * 2f, .65f, .16f, .035f);
+            PrototypeVfx.SpawnRing(origin, new Color(.4f, .8f, 1f) * 1.6f, .55f, .14f, .03f);
         }
 
         void CastIceNova()
@@ -143,7 +151,7 @@ namespace LightMaze.Combat
             }
 
             PrototypeVfx.SpawnIceNova(transform.position, IceRadius);
-            orbitCamera?.Shake(.22f, .18f);
+            orbitCamera?.Shake(.18f, .16f);
         }
 
         void CastHeal()
@@ -155,47 +163,58 @@ namespace LightMaze.Combat
 
         void OnDamaged(float amount)
         {
-            orbitCamera?.Shake(Mathf.Lerp(.08f, .22f, Mathf.Clamp01(amount / 25f)), .13f);
+            orbitCamera?.Shake(Mathf.Lerp(.07f, .18f, Mathf.Clamp01(amount / 25f)), .12f);
         }
 
         void OnGUI()
         {
             if (vitals == null) return;
 
-            const float x = 24f;
-            const float y = 24f;
-            const float w = 260f;
-            const float h = 18f;
+            const float x = 18f;
+            const float y = 14f;
+            const float w = 210f;
+            const float h = 14f;
 
             var titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 24,
+                fontSize = 17,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(.82f, .9f, 1f) }
+                normal = { textColor = new Color(.8f, .88f, 1f) }
             };
-            GUI.Label(new Rect(x, y - 4f, 380f, 36f), "LIGHT MAZE  //  VERTICAL SLICE", titleStyle);
+            GUI.Label(new Rect(x, y, 300f, 28f), "LIGHT MAZE  //  VERTICAL", titleStyle);
 
-            DrawBar(new Rect(x, y + 40f, w, h), vitals.Hp / vitals.MaxHp, new Color(.8f, .12f, .14f), $"HP  {Mathf.CeilToInt(vitals.Hp)} / {Mathf.CeilToInt(vitals.MaxHp)}");
-            DrawBar(new Rect(x, y + 64f, w, h), vitals.Mp / vitals.MaxMp, new Color(.18f, .48f, 1f), $"MP  {Mathf.CeilToInt(vitals.Mp)} / {Mathf.CeilToInt(vitals.MaxMp)}");
-            DrawBar(new Rect(x, y + 88f, w, h), lightValue / MaxLight, new Color(.52f, .86f, 1f), $"LIGHT  {Mathf.CeilToInt(lightValue)} / 100");
+            DrawBar(new Rect(x, y + 30f, w, h), vitals.Hp / vitals.MaxHp, new Color(.72f, .1f, .13f), $"HP  {Mathf.CeilToInt(vitals.Hp)} / {Mathf.CeilToInt(vitals.MaxHp)}");
+            DrawBar(new Rect(x, y + 49f, w, h), vitals.Mp / vitals.MaxMp, new Color(.12f, .38f, .88f), $"MP  {Mathf.CeilToInt(vitals.Mp)} / {Mathf.CeilToInt(vitals.MaxMp)}");
+            DrawBar(new Rect(x, y + 68f, w, h), lightValue / MaxLight, new Color(.38f, .74f, .95f), $"LIGHT  {Mathf.CeilToInt(lightValue)}");
 
-            var helpStyle = new GUIStyle(GUI.skin.label)
+            var hintStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
-                normal = { textColor = new Color(.78f, .82f, .9f) }
+                fontSize = 11,
+                normal = { textColor = new Color(.66f, .72f, .82f) }
             };
-            GUI.Label(new Rect(x, y + 118f, 520f, 90f), "WASD Move  |  Shift Sprint  |  Space Dodge\nLMB / J Light Bolt  |  Q Ice Nova  |  E Heal  |  Esc Cursor", helpStyle);
+            GUI.Label(new Rect(x, y + 88f, 230f, 20f), "H : controls", hintStyle);
+
+            if (helpPinned || Time.time <= helpVisibleUntil)
+            {
+                var helpStyle = new GUIStyle(GUI.skin.box)
+                {
+                    fontSize = 12,
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(.82f, .86f, .93f) }
+                };
+                GUI.Box(new Rect(x, y + 108f, 275f, 60f), "WASD Move   Shift Sprint   Space Dodge\nLMB/J Bolt   Q Ice Nova   E Heal\nEsc Cursor   H Hide/Show", helpStyle);
+            }
 
             if (vitals.IsDead)
             {
                 var deadStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 34,
+                    fontSize = 30,
                     alignment = TextAnchor.MiddleCenter,
                     fontStyle = FontStyle.Bold,
-                    normal = { textColor = new Color(1f, .35f, .35f) }
+                    normal = { textColor = new Color(1f, .3f, .3f) }
                 };
-                GUI.Label(new Rect(Screen.width * .5f - 260f, Screen.height * .5f - 60f, 520f, 120f), "LIGHT LOST\nPress R to restart", deadStyle);
+                GUI.Label(new Rect(Screen.width * .5f - 240f, Screen.height * .5f - 55f, 480f, 110f), "LIGHT LOST\nPress R to restart", deadStyle);
             }
         }
 
@@ -203,12 +222,13 @@ namespace LightMaze.Combat
         {
             value = Mathf.Clamp01(value);
             Color previous = GUI.color;
-            GUI.color = new Color(.035f, .045f, .065f, .92f);
+            GUI.color = new Color(.018f, .026f, .045f, .92f);
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = fill;
             GUI.DrawTexture(new Rect(rect.x + 2f, rect.y + 2f, (rect.width - 4f) * value, rect.height - 4f), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(rect.x + 7f, rect.y - 1f, rect.width, rect.height + 4f), label);
+            var barStyle = new GUIStyle(GUI.skin.label) { fontSize = 10, normal = { textColor = Color.white } };
+            GUI.Label(new Rect(rect.x + 6f, rect.y - 2f, rect.width, rect.height + 5f), label, barStyle);
             GUI.color = previous;
         }
     }
