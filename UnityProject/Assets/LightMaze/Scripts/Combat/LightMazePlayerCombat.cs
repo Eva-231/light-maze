@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -5,6 +6,7 @@ using UnityEngine.SceneManagement;
 using LightMaze.CameraSystem;
 using LightMaze.Enemies;
 using LightMaze.Visuals;
+using LightMaze.Production;
 
 namespace LightMaze.Combat
 {
@@ -31,6 +33,9 @@ namespace LightMaze.Combat
         bool subscribed;
 
         public float LightValue => lightValue;
+        public event Action BoltCast;
+        public event Action IceNovaCast;
+        public event Action HealCast;
 
         public void Configure(PlayerVitals playerVitals, Transform origin, Camera camera, Light light, PrototypeOrbitCamera orbit)
         {
@@ -109,6 +114,8 @@ namespace LightMaze.Combat
             Vector3 origin = castOrigin != null ? castOrigin.position : transform.position + Vector3.up * 1.2f;
             Vector3 direction = aimCamera != null ? aimCamera.transform.forward : transform.forward;
 
+            BoltCast?.Invoke();
+
             var bolt = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bolt.name = "Light Bolt";
             bolt.transform.position = origin;
@@ -134,12 +141,15 @@ namespace LightMaze.Combat
 
             var projectile = bolt.AddComponent<LightBoltProjectile>();
             projectile.Configure(direction, transform, 18f);
-            PrototypeVfx.SpawnRing(origin, new Color(.4f, .8f, 1f) * 1.6f, .55f, .14f, .03f);
+            ProductionFx.AttachBoltProjectile(bolt);
+            ProductionFx.SpawnBoltCast(origin);
         }
 
         void CastIceNova()
         {
             if (vitals == null || !vitals.SpendMp(IceCost)) return;
+
+            IceNovaCast?.Invoke();
 
             var hitEnemies = new HashSet<PrototypeEnemy>();
             foreach (var hit in Physics.OverlapSphere(transform.position, IceRadius, ~0, QueryTriggerInteraction.Ignore))
@@ -150,15 +160,16 @@ namespace LightMaze.Combat
                 enemy.Freeze(IceFreeze);
             }
 
-            PrototypeVfx.SpawnIceNova(transform.position, IceRadius);
+            ProductionFx.SpawnIceNova(transform.position, IceRadius);
             orbitCamera?.Shake(.18f, .16f);
         }
 
         void CastHeal()
         {
             if (vitals == null || !vitals.SpendMp(HealCost)) return;
+            HealCast?.Invoke();
             vitals.Heal(30f);
-            PrototypeVfx.SpawnHealAura(transform.position);
+            ProductionFx.SpawnHeal(transform.position);
         }
 
         void OnDamaged(float amount)
