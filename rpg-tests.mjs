@@ -13,10 +13,10 @@ test('Magic kills permanently, rewards are emitted once, and aimed shots and mis
  assert.equal(updateEnemies([e],p,1).events.length,0);assert.equal(flashEnemies([e],p),0);assert.equal(hurtEnemy(e,999).type,'ignored');const shot=castSpell(0,[e],p,stats);assert(shot.ok&&shot.miss);const before=p.mp;
  assert(castSpell(2,[],p,stats).ok);assert.equal(p.hp,75);assert.equal(p.mp,before-20);p.mp=0;assert(!castSpell(2,[],p,stats).ok);assert.equal(p.hp,75);
 });
-test('Wall occlusion, freezing, weak-point timing and recovery produce distinct tactical choices',()=>{
+test('Wall occlusion, frost nova crowd control, weak-point timing and recovery produce distinct tactical choices',()=>{
  core.generateStage(17,4);const stats=loadoutStats(newProgress()),e={...enemyPlan()[0],kind:0,hp:44,maxHp:44},p={x:e.x,z:e.z+3,yaw:0,pitch:0,light:100,count:0,seals:0,hp:95,mp:60};
  e.hp=e.maxHp=200;e.windup=.5;let r=castSpell(0,[e],p,stats,()=>1);assert.equal(r.events[0].damage,42);e.stun=0;e.windup=0;
- r=castSpell(1,[e],p,stats,()=>1);assert.equal(r.events[0].damage,24);assert.equal(e.stun,2.2);
+ const nearby={...e,id:999,x:p.x+2,z:p.z,hp:200,maxHp:200,stun:0,windup:0,recovery:0,dead:false,escaped:false};r=castSpell(1,[e,nearby],p,stats,()=>1);assert.equal(r.events.length,2);assert.equal(r.events[0].damage,20);assert.equal(e.stun,2.6);assert.equal(nearby.stun,2.6);assert.equal(r.area,5.2);
  let occluded=null;outer:for(const j of core.cells){p.x=j%core.W*core.S;p.z=Math.floor(j/core.W)*core.S;for(const i of core.cells){const x=i%core.W*core.S,z=Math.floor(i/core.W)*core.S;if(Math.hypot(x-p.x,z-p.z)<11&&!core.lineOfSight(x,z,p.x,p.z)){occluded={...e,x,z};break outer;}}}assert(occluded);const before=p.mp;assert(castSpell(0,[occluded],p,stats).miss);assert.equal(p.mp,before-6);
  p.mp=60;r=castSpell(2,[],p,stats);assert.equal(r.heal,5);assert.equal(p.hp,100);const m=p.mp;assert(!castSpell(2,[],p,stats).ok);assert.equal(p.mp,m);
 });
