@@ -1,30 +1,15 @@
-export function frostNovaFx(radius=6.3,hitCount=0){
+export function frostNovaFx(radius=14,hitCount=0){
  if(typeof document==='undefined'||typeof window==='undefined')return;
  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
- const root=document.createElement('div');
- root.setAttribute('aria-hidden','true');
- Object.assign(root.style,{position:'fixed',inset:'0',pointerEvents:'none',zIndex:'9999',overflow:'hidden'});
- const center=document.createElement('div');
- Object.assign(center.style,{position:'absolute',left:'50%',top:'54%',width:'42vmin',height:'42vmin',transform:'translate(-50%,-50%)',borderRadius:'50%',border:'4px solid rgba(184,232,255,.95)',boxShadow:'0 0 26px rgba(135,211,255,.95), inset 0 0 34px rgba(164,228,255,.65)',background:'radial-gradient(circle,rgba(220,246,255,.28) 0%,rgba(113,190,255,.15) 36%,rgba(70,145,255,.05) 55%,rgba(0,0,0,0) 72%)'});
- root.append(center);
- for(let i=0;i<3;i++){
-  const ring=document.createElement('div');
-  Object.assign(ring.style,{position:'absolute',left:'50%',top:'54%',width:(26+i*15)+'vmin',height:(26+i*15)+'vmin',transform:'translate(-50%,-50%) scale(.25)',borderRadius:'50%',border:(5-i)+'px solid rgba('+(185-i*20)+','+(235-i*10)+',255,'+(.95-i*.18)+')',boxShadow:'0 0 '+(18+i*10)+'px rgba(126,208,255,.8)',opacity:'0'});
-  root.append(ring);
-  if(!reduced)ring.animate([{transform:'translate(-50%,-50%) scale(.2)',opacity:0},{offset:.18,opacity:1},{transform:'translate(-50%,-50%) scale(1.25)',opacity:0}],{duration:520+i*110,easing:'cubic-bezier(.08,.72,.19,1)',fill:'forwards'});
-  else ring.style.opacity='.75';
- }
- for(let i=0;i<18;i++){
-  const shard=document.createElement('div'),a=i/18*Math.PI*2,dist=16+Math.random()*22;
-  Object.assign(shard.style,{position:'absolute',left:'50%',top:'54%',width:'4px',height:(18+Math.random()*34)+'px',borderRadius:'8px',background:'linear-gradient(#effcff,#7ec8ff 55%,rgba(77,150,255,0))',boxShadow:'0 0 12px rgba(154,221,255,.95)',transformOrigin:'50% 100%',transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-${dist}px) scaleY(.4)`,opacity:'0'});
-  root.append(shard);
-  if(!reduced)shard.animate([{opacity:0,transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-8px) scaleY(.2)`},{offset:.22,opacity:1},{opacity:0,transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-${dist*2.2}px) scaleY(1.25)`}],{duration:520+Math.random()*180,easing:'ease-out',fill:'forwards'});
-  else shard.style.opacity='.65';
- }
- const label=document.createElement('div');
- label.textContent=`❄ 氷結範囲 ${radius.toFixed(1)}m${hitCount?` · ${hitCount}体 HIT`:''}`;
- Object.assign(label.style,{position:'absolute',left:'50%',top:'17%',transform:'translateX(-50%)',padding:'8px 14px',border:'1px solid rgba(180,228,255,.75)',borderRadius:'999px',background:'rgba(5,20,38,.72)',backdropFilter:'blur(5px)',color:'#dff7ff',font:'700 13px/1.1 system-ui,sans-serif',letterSpacing:'.08em',textShadow:'0 0 12px #6fc4ff',whiteSpace:'nowrap'});
- root.append(label);
- if(!reduced){center.animate([{transform:'translate(-50%,-50%) scale(.35)',opacity:.15},{offset:.2,opacity:1},{transform:'translate(-50%,-50%) scale(1.35)',opacity:0}],{duration:650,easing:'ease-out',fill:'forwards'});label.animate([{opacity:0,transform:'translateX(-50%) translateY(8px)'},{opacity:1},{offset:.65,opacity:1},{opacity:0,transform:'translateX(-50%) translateY(-8px)'}],{duration:900,easing:'ease-out',fill:'forwards'});} 
- document.body.append(root);setTimeout(()=>root.remove(),reduced?500:950);
+ const root=document.createElement('div');root.setAttribute('aria-hidden','true');
+ Object.assign(root.style,{position:'fixed',inset:'0',pointerEvents:'none',zIndex:'9999',overflow:'hidden',background:'radial-gradient(circle at 50% 58%,rgba(100,190,255,.12),transparent 58%)',mixBlendMode:'screen'});
+ document.body.append(root);
+ const add=(css)=>{const e=document.createElement('div');Object.assign(e.style,{position:'absolute',...css});root.append(e);return e};
+ const flash=add({inset:'0',background:'radial-gradient(circle at 50% 56%,rgba(235,252,255,.92) 0%,rgba(100,190,255,.28) 18%,transparent 55%)',opacity:'0'});
+ const sigil=add({left:'50%',top:'62%',width:'64vmin',height:'24vmin',transform:'translate(-50%,-50%) perspective(500px) rotateX(64deg) scale(.2)',borderRadius:'50%',border:'2px solid rgba(185,238,255,.95)',boxShadow:'0 0 22px #79cfff,inset 0 0 28px rgba(100,190,255,.65)',opacity:'0'});
+ for(let i=0;i<3;i++){const ring=add({left:'50%',top:'58%',width:(38+i*24)+'vmin',height:(38+i*24)+'vmin',transform:'translate(-50%,-50%) scale(.1)',borderRadius:'50%',border:`${5-i}px solid rgba(${205-i*18},${244-i*8},255,${.95-i*.16})`,boxShadow:`0 0 ${22+i*12}px rgba(105,200,255,.9)`,opacity:'0'});if(!reduced)ring.animate([{transform:'translate(-50%,-50%) scale(.08)',opacity:0},{offset:.16,opacity:1},{transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],{duration:720+i*120,easing:'cubic-bezier(.05,.75,.12,1)',fill:'forwards'});}
+ for(let i=0;i<30;i++){const a=i/30*Math.PI*2,ice=add({left:'50%',top:'62%',width:(5+Math.random()*5)+'px',height:(35+Math.random()*75)+'px',clipPath:'polygon(50% 0,100% 82%,55% 100%,0 82%)',background:'linear-gradient(90deg,rgba(255,255,255,.96),rgba(125,211,255,.88),rgba(58,123,255,.12))',filter:'drop-shadow(0 0 8px #8edbff)',transformOrigin:'50% 100%',transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-12vmin) scaleY(.05)`,opacity:'0'});if(!reduced)ice.animate([{opacity:0,transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-8vmin) scaleY(.05)`},{offset:.22,opacity:1},{offset:.58,opacity:.95,transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-${18+Math.random()*24}vmin) scaleY(1.2)`},{opacity:0,transform:`translate(-50%,-100%) rotate(${a}rad) translateY(-${22+Math.random()*28}vmin) scaleY(.7)`}],{duration:850+Math.random()*260,easing:'cubic-bezier(.1,.75,.2,1)',fill:'forwards'});}
+ for(let i=0;i<42;i++){const p=add({left:'50%',top:'58%',width:'4px',height:'4px',borderRadius:'50%',background:'#eaffff',boxShadow:'0 0 9px #7fd4ff',opacity:'0'}),a=Math.random()*Math.PI*2,d=18+Math.random()*46;if(!reduced)p.animate([{transform:'translate(-50%,-50%)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*d}vmin),calc(-50% + ${Math.sin(a)*d*.55}vmin))`,opacity:0}],{duration:520+Math.random()*500,easing:'ease-out',fill:'forwards'});}
+ const label=add({left:'50%',top:'15%',transform:'translateX(-50%)',padding:'8px 16px',border:'1px solid rgba(190,235,255,.55)',borderRadius:'999px',background:'rgba(2,12,25,.62)',backdropFilter:'blur(8px)',color:'#e8fbff',font:'700 12px/1 system-ui,sans-serif',letterSpacing:'.14em',textShadow:'0 0 14px #70caff',whiteSpace:'nowrap'});label.textContent=`ICE NOVA · ROOM FREEZE${hitCount?` · ${hitCount} HIT`:''}`;
+ if(!reduced){flash.animate([{opacity:0},{offset:.13,opacity:.95},{offset:.24,opacity:.15},{opacity:0}],{duration:650,fill:'forwards'});sigil.animate([{opacity:0,transform:'translate(-50%,-50%) perspective(500px) rotateX(64deg) scale(.15)'},{offset:.18,opacity:1},{offset:.58,opacity:.8,transform:'translate(-50%,-50%) perspective(500px) rotateX(64deg) scale(1.25)'},{opacity:0,transform:'translate(-50%,-50%) perspective(500px) rotateX(64deg) scale(1.5)'}],{duration:900,easing:'ease-out',fill:'forwards'});label.animate([{opacity:0,transform:'translateX(-50%) translateY(10px)'},{offset:.18,opacity:1},{offset:.7,opacity:1},{opacity:0,transform:'translateX(-50%) translateY(-8px)'}],{duration:1100,fill:'forwards'});}setTimeout(()=>root.remove(),reduced?500:1250);
 }
