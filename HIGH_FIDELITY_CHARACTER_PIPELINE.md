@@ -36,6 +36,43 @@ The window can:
 11. save to the exact Resources path already consumed at runtime,
 12. validate Animator, sockets, renderers, missing materials, triangle density, controller and LOD presence.
 
+A second finishing tool is available at:
+
+`LIGHT MAZE > Production > High Fidelity Character Finishing`
+
+It can:
+
+- bind a premium right-hand weapon to `WeaponSocket_R`,
+- bind an optional off-hand asset to `WeaponSocket_L`,
+- bind a dedicated LIGHT-core prefab to `ChestLightSocket`,
+- preserve per-accessory local position/rotation/scale alignment,
+- replace only tool-managed accessories without deleting unrelated child content,
+- validate the exact Animator parameters consumed by `ProductionAnimatorBridge` for both player and enemies.
+
+The Animator validator requires these contracts:
+
+Player:
+
+- Float `Speed`
+- Float `MoveSpeed01`
+- Bool `Sprint`
+- Bool `Grounded`
+- Bool `Dead`
+- Trigger `Dodge`
+- Trigger `CastBolt`
+- Trigger `CastIceNova`
+- Trigger `Heal`
+
+Enemies:
+
+- Float `Speed`
+- Bool `Frozen`
+- Bool `Dead`
+- Trigger `Attack`
+- Trigger `HitReact`
+- Trigger `Freeze`
+- Trigger `Death`
+
 ## Exact output paths
 
 - `Assets/LightMaze/Production/Resources/LightMazeProduction/Models/Player_Explorer.prefab`
@@ -57,8 +94,10 @@ These are the same paths used by `ProductionAssetContract` / `ProductionModelInj
 8. Use material overrides only where they improve the visual identity (white hair, black/silver armor, pale cloth). Do not flatten a sophisticated source material setup unnecessarily.
 9. Adjust local scale/rotation until the source matches the gameplay capsule.
 10. Build / Refresh Production Character.
-11. Run `LIGHT MAZE > Production > Validate High Fidelity Characters`.
-12. Play `SampleScene` and verify locomotion, dodge, Bolt, Ice Nova, Heal, sockets, clipping and camera readability.
+11. Open High Fidelity Character Finishing and optionally bind the final sword/off-hand/LIGHT-core prefabs.
+12. Run `LIGHT MAZE > Production > Validate High Fidelity Characters`.
+13. Run `LIGHT MAZE > Production > Validate High Fidelity Animator Contracts`.
+14. Play `SampleScene` and verify locomotion, dodge, Bolt, Ice Nova, Heal, sockets, clipping and camera readability.
 
 ## Quality gates
 
