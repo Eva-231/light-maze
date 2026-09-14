@@ -1,0 +1,4 @@
+LIGHT MAZE production assets live here.
+Models that replace prototype geometry MUST be prefabs in Resources/LightMazeProduction/Models using the exact required names.
+Signature VFX prefabs MUST be placed in Resources/LightMazeProduction/VFX using the exact names from UNITY_ASTRA_PRODUCTION_PASS.md.
+Do not delete gameplay roots/colliders/scripts. ProductionModelInjector swaps visuals at runtime.

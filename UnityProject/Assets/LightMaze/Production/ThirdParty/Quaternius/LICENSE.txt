@@ -1,0 +1,6 @@
+Quaternius — Ultimate Animated Animal Pack (July 2021)
+Wolf.fbx, including its skeletal animations.
+Source: https://quaternius.com/packs/ultimateanimatedanimals.html
+Official distribution: https://drive.google.com/drive/folders/1uJ3N5HfB7jKTseJUNQr3N4YaN0UuEtHk
+License: CC0 1.0 Universal https://creativecommons.org/publicdomain/zero/1.0/
+Retrieved 2026-09-14. LIGHT MAZE adds materials and emissive mane/eyes.

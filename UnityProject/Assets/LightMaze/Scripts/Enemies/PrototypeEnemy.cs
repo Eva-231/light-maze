@@ -147,7 +147,29 @@ namespace LightMaze.Enemies
         {
             Attacked?.Invoke();
             if (kind == PrototypeEnemyKind.AbyssGuardian)
-                ProductionFx.SpawnGuardianAttack(transform.position + transform.forward * 1.25f, transform.rotation);
+            {
+                Vector3 strikeCenter = transform.position + transform.forward * 1.25f;
+                ProductionFx.SpawnGuardianAttack(strikeCenter, transform.rotation);
+                StartCoroutine(ResolveGuardianStrike(strikeCenter));
+                return;
+            }
+
+            ApplyAttackDamage();
+        }
+
+        IEnumerator ResolveGuardianStrike(Vector3 strikeCenter)
+        {
+            // Match the production floor telegraph: damage lands with the sword crescent, not before the warning.
+            yield return new WaitForSeconds(.5f);
+            if (dead || IsFrozen || player == null || playerVitals == null || playerVitals.IsDead) yield break;
+            Vector3 offset = player.position - strikeCenter;
+            offset.y = 0f;
+            if (offset.magnitude > 2.3f) yield break;
+            ApplyAttackDamage();
+        }
+
+        void ApplyAttackDamage()
+        {
 
             if (playerMotor != null && playerMotor.IsDodging)
             {

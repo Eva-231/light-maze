@@ -192,11 +192,11 @@ namespace LightMaze.Combat
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(.8f, .88f, 1f) }
             };
-            GUI.Label(new Rect(x, y, 300f, 28f), "LIGHT MAZE  //  VERTICAL", titleStyle);
+            GUI.Label(new Rect(x, y, 300f, 28f), "L I G H T  M A Z E", titleStyle);
 
-            DrawBar(new Rect(x, y + 30f, w, h), vitals.Hp / vitals.MaxHp, new Color(.72f, .1f, .13f), $"HP  {Mathf.CeilToInt(vitals.Hp)} / {Mathf.CeilToInt(vitals.MaxHp)}");
-            DrawBar(new Rect(x, y + 49f, w, h), vitals.Mp / vitals.MaxMp, new Color(.12f, .38f, .88f), $"MP  {Mathf.CeilToInt(vitals.Mp)} / {Mathf.CeilToInt(vitals.MaxMp)}");
-            DrawBar(new Rect(x, y + 68f, w, h), lightValue / MaxLight, new Color(.38f, .74f, .95f), $"LIGHT  {Mathf.CeilToInt(lightValue)}");
+            DrawBar(new Rect(x, y + 30f, w, h), vitals.Hp / vitals.MaxHp, new Color(.53f, .12f, .18f), $"HP  {Mathf.CeilToInt(vitals.Hp)} / {Mathf.CeilToInt(vitals.MaxHp)}");
+            DrawBar(new Rect(x, y + 49f, w, h), vitals.Mp / vitals.MaxMp, new Color(.16f, .42f, .6f), $"MP  {Mathf.CeilToInt(vitals.Mp)} / {Mathf.CeilToInt(vitals.MaxMp)}");
+            DrawBar(new Rect(x, y + 68f, w, h), lightValue / MaxLight, new Color(.55f, .77f, .88f), $"LIGHT  {Mathf.CeilToInt(lightValue)}");
 
             var hintStyle = new GUIStyle(GUI.skin.label)
             {

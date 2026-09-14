@@ -1,0 +1,8 @@
+GanzSe FREE Modular Character – Fantasy Low Poly Pack, version 1.12
+Publisher: GanzSe
+https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/ganzse-free-modular-character-fantasy-low-poly-pack-321521
+License: Standard Unity Asset Store EULA, acquired by the project owner on 2026-09-14.
+Used as the rigged base for Explorer, Shadow Soldier and Abyss Guardian.
+Source assets remain under their original license, not the project's code license.
+Local adaptation: production materials, selected modular parts, cloth, weapons, ornaments and skeletal animation clips.
+Demo script's UnityEditor using directive is guarded for player builds.

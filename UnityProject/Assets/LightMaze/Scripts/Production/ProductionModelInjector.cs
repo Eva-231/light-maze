@@ -27,7 +27,7 @@ namespace LightMaze.Production
             }
 
             if (player == null) yield break;
-            yield return null;
+            for (int frame = 0; frame < 5; frame++) yield return null;
 
             TrySwapPlayer(player);
             TrySwapEnemy(GameObject.Find("Shadow Soldier"), ProductionRole.ShadowSoldier, "Red Core");
@@ -65,6 +65,7 @@ namespace LightMaze.Production
                 core.SetParent(chestSocket, false);
                 core.localPosition = Vector3.zero;
                 core.localRotation = Quaternion.identity;
+                foreach (var light in core.GetComponentsInChildren<Light>()) { light.enabled = false; }
             }
 
             var animator = instance.GetComponentInChildren<Animator>(true);
@@ -100,6 +101,7 @@ namespace LightMaze.Production
                 oldCore.SetParent(chestSocket, false);
                 oldCore.localPosition = Vector3.zero;
                 oldCore.localRotation = Quaternion.identity;
+                foreach (var light in oldCore.GetComponentsInChildren<Light>()) { light.intensity = .04f; light.range = 1.5f; }
             }
 
             var animator = instance.GetComponentInChildren<Animator>(true);
