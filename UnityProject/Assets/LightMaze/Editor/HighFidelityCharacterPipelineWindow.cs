@@ -127,10 +127,26 @@ namespace LightMaze.EditorTools
                 sourceInstance.transform.localScale = Vector3.one * modelScale;
 
                 var animator = sourceInstance.GetComponentInChildren<Animator>(true);
+                if (role == ProductionRole.PlayerExplorer)
+                {
+                    if (sourcePath.IndexOf("GanzSe", StringComparison.OrdinalIgnoreCase) >= 0)
+                        throw new InvalidOperationException("GanzSe is a temporary test character and cannot be promoted to the final hero.");
+                    if (animator == null || animator.avatar == null || !animator.avatar.isValid || !animator.avatar.isHuman)
+                        throw new InvalidOperationException("The replacement hero requires a valid Humanoid Avatar. Configure the source FBX Rig before import.");
+                    var selectedController = animatorController != null ? animatorController : animator.runtimeAnimatorController;
+                    if (selectedController == null)
+                        throw new InvalidOperationException("Assign the replacement hero's retargeted animation controller before replacing the working prefab.");
+                    if (selectedController.animationClips.Length == 0)
+                        throw new InvalidOperationException("The replacement animation controller contains no motion clips.");
+                    foreach (var clip in selectedController.animationClips)
+                        if (!clip.isHumanMotion)
+                            throw new InvalidOperationException("Generic bone-path animation cannot be retargeted to the new hero: " + clip.name);
+                }
                 if (animator == null)
                     animator = sourceInstance.AddComponent<Animator>();
                 if (animatorController != null)
                     animator.runtimeAnimatorController = animatorController;
+                animator.applyRootMotion = false; // CharacterController remains the movement authority.
 
                 ApplySurfaceOverrides(sourceInstance);
                 CreateContractSockets(wrapper.transform, animator);

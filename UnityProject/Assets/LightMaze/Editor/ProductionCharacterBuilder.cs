@@ -37,6 +37,13 @@ namespace LightMaze.EditorTools
         }
         static void Human(string name,int role,int armorType)
         {
+            string destination=Art+"/Resources/LightMazeProduction/Models/"+name+".prefab";
+            var existing=AssetDatabase.LoadAssetAtPath<GameObject>(destination);
+            if(existing!=null && existing.GetComponent<LightMaze.Production.HighFidelityCharacterProfile>()!=null)
+            {
+                Debug.Log("Preserving imported character: "+destination);
+                return;
+            }
             var root=new GameObject(name); var model=Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Source),root.transform);model.name="Model";
             foreach(var s in model.GetComponentsInChildren<MonoBehaviour>(true))Object.DestroyImmediate(s);
             foreach(var a in model.GetComponentsInChildren<Animator>(true))Object.DestroyImmediate(a);
