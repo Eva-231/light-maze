@@ -14,6 +14,7 @@ namespace LightMaze.Production
         PrototypeEnemy enemy;
         Vector3 previousPosition;
         bool wasDodging;
+        PlayerSwordCombat sword;
 
         public void ConfigurePlayer(Animator targetAnimator, PrototypeThirdPersonMotor targetMotor, LightMazePlayerCombat targetCombat, PlayerVitals targetVitals)
         {
@@ -22,6 +23,13 @@ namespace LightMaze.Production
             combat = targetCombat;
             vitals = targetVitals;
             previousPosition = transform.position;
+
+            sword = GetComponent<PlayerSwordCombat>();
+            if (sword != null)
+            {
+                sword.SwingStarted += OnSwordSwing;
+                sword.SwingCancelled += OnSwordCancelled;
+            }
 
             if (combat != null)
             {
@@ -48,6 +56,11 @@ namespace LightMaze.Production
 
         void OnDestroy()
         {
+            if (sword != null)
+            {
+                sword.SwingStarted -= OnSwordSwing;
+                sword.SwingCancelled -= OnSwordCancelled;
+            }
             if (combat != null)
             {
                 combat.BoltCast -= OnBoltCast;
@@ -92,6 +105,17 @@ namespace LightMaze.Production
         }
 
         void OnBoltCast() => SetTrigger("CastBolt");
+        void OnSwordSwing(int stage)
+        {
+            string state = "Sword" + (stage + 1);
+            if (animator != null && animator.HasState(0, Animator.StringToHash(state)))
+                animator.CrossFadeInFixedTime(state, .04f, 0);
+        }
+        void OnSwordCancelled()
+        {
+            if (animator != null && vitals != null && !vitals.IsDead)
+                animator.CrossFadeInFixedTime(motor != null && motor.IsDodging ? "Dodge" : "Idle", .04f, 0);
+        }
         void OnIceNovaCast() => SetTrigger("CastIceNova");
         void OnHealCast() => SetTrigger("Heal");
         void OnEnemyAttack() => SetTrigger("Attack");

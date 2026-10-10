@@ -6,7 +6,16 @@ namespace LightMaze.Production
 {
     public sealed class ProductionQualityRuntime : MonoBehaviour
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void RegisterSceneLoading()
+        {
+            // Also initialize reloads (death/retry); AfterSceneLoad runs only once per launch.
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Inject();
+
         static void Inject()
         {
             if (SceneManager.GetActiveScene().name != "SampleScene") return;

@@ -1,0 +1,7 @@
+{
+  "name": "LightMaze.PlayModeTests",
+  "references": ["Unity.InputSystem"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": [],
+  "autoReferenced": false
+}

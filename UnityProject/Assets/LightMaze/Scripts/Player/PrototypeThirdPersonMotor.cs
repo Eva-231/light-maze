@@ -82,6 +82,8 @@ namespace LightMaze.Player
             bool sprinting = (keyboard != null && keyboard.leftShiftKey.isPressed)
                 || (gamepad != null && gamepad.leftStickButton.isPressed);
             float speed = sprinting ? sprintSpeed : walkSpeed;
+            var sword = GetComponent<PlayerSwordCombat>();
+            if (sword != null && sword.IsAttacking) speed *= .3f;
             Vector3 planar = IsDodging ? dodgeDirection * dodgeSpeed : desired * speed;
             PlanarVelocity = planar;
 

@@ -141,6 +141,16 @@ namespace LightMaze.EditorTools
                             if(b=="spine_03")delta.x=8;
                         }
                         else if(type=="Idle"&&b=="spine_03")delta.x=wave*1.2f;
+                        else if(type.StartsWith("Sword"))
+                        {
+                            int stage=int.Parse(type.Substring(5))-1;
+                            float impact=stage==2?.43f:.38f;
+                            float sweep=t<impact?Mathf.SmoothStep(-1,1,t/impact):Mathf.SmoothStep(1,0,(t-impact)/(1-impact));
+                            float side=stage==1?-1:1;
+                            if(b=="upperarm_r") {delta.x=stage==2?-110+100*Mathf.Max(0,sweep):-65;delta.y=side*sweep*65;delta.z=-40;}
+                            if(b=="upperarm_l") {delta.x=-25;delta.z=55;}
+                            if(b=="spine_03") {delta.y=side*sweep*32;delta.x=stage==2?pulse*15:5;}
+                        }
                         else if(type=="Attack"||type=="CastIceNova"||type=="CastBolt"||type=="Heal")
                         {
                             float a=type=="Attack"?Mathf.Sin(t*Mathf.PI):pulse;
@@ -170,6 +180,13 @@ namespace LightMaze.EditorTools
                 tr=sm.AddAnyStateTransition(st);tr.hasExitTime=false;tr.duration=.06f;tr.canTransitionToSelf=false;
                 tr.AddCondition(type=="Death"?AnimatorConditionMode.If:AnimatorConditionMode.If,0,type=="Death"?"Dead":type);
                 if(type!="Death"){var back=st.AddTransition(idle);back.hasExitTime=type!="Freeze";back.exitTime=.95f;back.duration=.12f;if(type=="Freeze")back.AddCondition(AnimatorConditionMode.IfNot,0,"Frozen");}
+            }
+            if(role==0)for(int stage=0;stage<3;stage++)
+            {
+                string type="Sword"+(stage+1);
+                var state=sm.AddState(type);
+                state.motion=Clip(type,LightMaze.Combat.PlayerSwordCombat.Durations[stage],false);
+                var back=state.AddTransition(idle);back.hasExitTime=true;back.exitTime=1f;back.duration=.06f;
             }
             EditorUtility.SetDirty(ac);return ac;
         }

@@ -49,6 +49,7 @@ namespace LightMaze.Combat
 
         void Awake()
         {
+            if (GetComponent<PlayerSwordCombat>() == null) gameObject.AddComponent<PlayerSwordCombat>();
             if (vitals == null) vitals = GetComponent<PlayerVitals>();
             lightValue = MaxLight;
             helpVisibleUntil = Time.time + 7f;
@@ -91,8 +92,10 @@ namespace LightMaze.Combat
 
             var mouse = Mouse.current;
 
-            bool boltPressed = (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked)
-                || (keyboard != null && keyboard.jKey.wasPressedThisFrame)
+            var sword = GetComponent<PlayerSwordCombat>();
+            if (sword != null && sword.IsAttacking) return;
+            bool boltPressed = (mouse != null && mouse.rightButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked)
+                || (keyboard != null && keyboard.kKey.wasPressedThisFrame)
                 || (gamepad != null && gamepad.rightTrigger.wasPressedThisFrame);
 
             if (boltPressed) CastLightBolt();
@@ -219,8 +222,8 @@ namespace LightMaze.Combat
                     normal = { textColor = new Color(.82f, .86f, .93f) }
                 };
                 string controls = Gamepad.current != null
-                    ? "LS Move / Press Sprint   RS Camera\nB Dodge   RT Bolt   LB Ice   Y Heal\nStart Retry after defeat"
-                    : "WASD Move   Shift Sprint   Space Dodge\nLMB/J Bolt   Q Ice Nova   E Heal\nEsc Cursor   H Hide/Show";
+                    ? "LS Move / Press Sprint   RS Camera\nX Sword   B Dodge   RT Bolt   LB Ice   Y Heal\nStart Retry after defeat"
+                    : "WASD Move   Shift Sprint   Space Dodge\nLMB/J Sword   RMB/K Bolt   Q Ice   E Heal\nEsc Cursor   H Hide/Show";
                 GUI.Box(new Rect(x, y + 108f, 300f, 60f), controls, helpStyle);
             }
 
