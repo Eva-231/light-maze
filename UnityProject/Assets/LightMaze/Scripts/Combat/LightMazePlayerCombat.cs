@@ -74,12 +74,14 @@ namespace LightMaze.Combat
             if (vitals == null) return;
 
             var keyboard = Keyboard.current;
+            var gamepad = Gamepad.current;
             if (keyboard != null && keyboard.hKey.wasPressedThisFrame)
                 helpPinned = !helpPinned;
 
             if (vitals.IsDead)
             {
-                if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+                if ((keyboard != null && keyboard.rKey.wasPressedThisFrame)
+                    || (gamepad != null && gamepad.startButton.wasPressedThisFrame))
                     SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
                 return;
             }
@@ -90,11 +92,14 @@ namespace LightMaze.Combat
             var mouse = Mouse.current;
 
             bool boltPressed = (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked)
-                || (keyboard != null && keyboard.jKey.wasPressedThisFrame);
+                || (keyboard != null && keyboard.jKey.wasPressedThisFrame)
+                || (gamepad != null && gamepad.rightTrigger.wasPressedThisFrame);
 
             if (boltPressed) CastLightBolt();
-            if (keyboard != null && keyboard.qKey.wasPressedThisFrame) CastIceNova();
-            if (keyboard != null && keyboard.eKey.wasPressedThisFrame) CastHeal();
+            if ((keyboard != null && keyboard.qKey.wasPressedThisFrame)
+                || (gamepad != null && gamepad.leftShoulder.wasPressedThisFrame)) CastIceNova();
+            if ((keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                || (gamepad != null && gamepad.buttonNorth.wasPressedThisFrame)) CastHeal();
         }
 
         void UpdateCoreLight()
@@ -213,7 +218,10 @@ namespace LightMaze.Combat
                     alignment = TextAnchor.UpperLeft,
                     normal = { textColor = new Color(.82f, .86f, .93f) }
                 };
-                GUI.Box(new Rect(x, y + 108f, 275f, 60f), "WASD Move   Shift Sprint   Space Dodge\nLMB/J Bolt   Q Ice Nova   E Heal\nEsc Cursor   H Hide/Show", helpStyle);
+                string controls = Gamepad.current != null
+                    ? "LS Move / Press Sprint   RS Camera\nB Dodge   RT Bolt   LB Ice   Y Heal\nStart Retry after defeat"
+                    : "WASD Move   Shift Sprint   Space Dodge\nLMB/J Bolt   Q Ice Nova   E Heal\nEsc Cursor   H Hide/Show";
+                GUI.Box(new Rect(x, y + 108f, 300f, 60f), controls, helpStyle);
             }
 
             if (vitals.IsDead)
@@ -225,7 +233,7 @@ namespace LightMaze.Combat
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = new Color(1f, .3f, .3f) }
                 };
-                GUI.Label(new Rect(Screen.width * .5f - 240f, Screen.height * .5f - 55f, 480f, 110f), "LIGHT LOST\nPress R to restart", deadStyle);
+                GUI.Label(new Rect(Screen.width * .5f - 240f, Screen.height * .5f - 55f, 480f, 110f), "LIGHT LOST\nPress R / Start to restart", deadStyle);
             }
         }
 

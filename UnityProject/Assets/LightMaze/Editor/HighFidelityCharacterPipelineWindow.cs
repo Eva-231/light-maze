@@ -175,11 +175,15 @@ namespace LightMaze.EditorTools
                 for (int i = 0; i < materials.Length; i++)
                 {
                     var current = materials[i];
-                    string signature = (renderer.name + " " + (current != null ? current.name : string.Empty)).ToLowerInvariant();
+                    // Classify each surface, never the whole combined body mesh.
+                    // Keep eye/cornea/teeth materials and their specialist shaders intact.
+                    if (current == null) continue;
+                    string signature = current.name.ToLowerInvariant();
+                    if (ContainsAny(signature, "eye", "cornea", "iris", "tear", "teeth", "tongue")) continue;
                     Material replacement = null;
 
                     if (ContainsAny(signature, "hair", "brow", "lash")) replacement = hairOverride;
-                    else if (ContainsAny(signature, "skin", "face", "head", "body", "eye")) replacement = skinOverride;
+                    else if (ContainsAny(signature, "skin", "face", "head", "body")) replacement = skinOverride;
                     else if (ContainsAny(signature, "armor", "armour", "metal", "plate", "gauntlet", "greave", "helmet")) replacement = armorOverride;
                     else if (ContainsAny(signature, "cloth", "fabric", "cape", "cloak", "coat", "robe", "scarf", "skirt")) replacement = clothOverride;
 
@@ -229,6 +233,8 @@ namespace LightMaze.EditorTools
 
         static void TryBuildNamedLods(GameObject sourceInstance)
         {
+            // Imported LOD distances and renderer membership belong to the source asset.
+            if (sourceInstance.GetComponentInChildren<LODGroup>(true) != null) return;
             var all = sourceInstance.GetComponentsInChildren<Renderer>(true);
             var lod0 = all.Where(r => NameHasLod(r.name, 0)).ToArray();
             var lod1 = all.Where(r => NameHasLod(r.name, 1)).ToArray();

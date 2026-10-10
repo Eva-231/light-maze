@@ -49,11 +49,11 @@ export class Sound{
     this.music=ctx.createGain();this.music.gain.value=0;this.music.connect(this.master);this.musicFilter=ctx.createBiquadFilter();this.musicFilter.type='lowpass';this.musicFilter.frequency.value=5200;this.musicFilter.connect(this.music);
     this.noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*.15),ctx.sampleRate);const b=this.noise.getChannelData(0);for(let i=0;i<b.length;i++)b[i]=(Math.random()*2-1)*(1-i/b.length);this.switchTrack(this.pendingKey,0);
    }
-   const ctx=this.context;this.setEnabled();if(ctx.state==='suspended')await ctx.resume();if(this.settings.sound&&this.settings.musicVolume!==0){const channel=this.ensureTrack(this.currentKey);if(channel.audio.paused)await channel.audio.play().catch(()=>{});}
+   const ctx=this.context;this.setEnabled(false);if(ctx.state==='suspended')await ctx.resume();if(this.settings.sound&&this.settings.musicVolume!==0){const channel=this.ensureTrack(this.currentKey);if(channel.audio.paused)await channel.audio.play().catch(()=>{});}
   }catch(error){console.warn('Sound unavailable:',error?.name);}
  }
  suspend(){for(const channel of this.tracks.values())channel.audio.pause();this.context?.suspend().catch(()=>{});}
- setEnabled(){if(!this.context)return;const t=this.context.currentTime;this.master.gain.cancelScheduledValues(t);this.master.gain.setTargetAtTime(this.settings.sound?.6:0,t,.08);if(!this.settings.sound||this.settings.musicVolume===0)for(const channel of this.tracks.values())channel.audio.pause();else this.start();}
+ setEnabled(resumePlayback=true){if(!this.context)return;const t=this.context.currentTime;this.master.gain.cancelScheduledValues(t);this.master.gain.setTargetAtTime(this.settings.sound?.6:0,t,.08);if(!this.settings.sound||this.settings.musicVolume===0)for(const channel of this.tracks.values())channel.audio.pause();else if(resumePlayback)this.start();}
  setScene(scene){const key=typeof scene==='string'?scene:musicScene(scene);if(key!==this.pendingKey||key!==this.currentKey)this.switchTrack(key);}
  get title(){return MUSIC_TRACKS[this.currentKey]?.title||MUSIC_TRACKS.home.title;}
  note(freq,duration=.28,volume=.07,delay=0,type='sine'){

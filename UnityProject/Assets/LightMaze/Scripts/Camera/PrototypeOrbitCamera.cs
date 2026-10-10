@@ -8,6 +8,7 @@ namespace LightMaze.CameraSystem
         [SerializeField] float distance = 7.4f;
         [SerializeField] float height = 1.55f;
         [SerializeField] float sensitivity = .11f;
+        [SerializeField] float gamepadLookDegreesPerSecond = 150f;
         [SerializeField] float pitchMin = -10f;
         [SerializeField] float pitchMax = 52f;
         [SerializeField] float smoothTime = .05f;
@@ -75,6 +76,14 @@ namespace LightMaze.CameraSystem
                 Vector2 delta = mouse.delta.ReadValue();
                 yaw += delta.x * sensitivity;
                 pitch = Mathf.Clamp(pitch - delta.y * sensitivity, pitchMin, pitchMax);
+            }
+
+            var gamepad = Gamepad.current;
+            if (gamepad != null)
+            {
+                Vector2 stick = gamepad.rightStick.ReadValue();
+                yaw += stick.x * gamepadLookDegreesPerSecond * Time.deltaTime;
+                pitch = Mathf.Clamp(pitch - stick.y * gamepadLookDegreesPerSecond * Time.deltaTime, pitchMin, pitchMax);
             }
 
             Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
